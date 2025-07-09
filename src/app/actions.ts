@@ -6,6 +6,7 @@ import { generateStoryIllustration } from '@/ai/flows/generate-story-illustratio
 
 export type StoryData = {
   story: string;
+  sentences: string[];
   illustrations: string[];
 }
 
@@ -37,12 +38,9 @@ export async function generateStoryAction(
   }
   
   try {
-    const { story } = await generateGreekStory(validatedFields.data);
+    const { sentences } = await generateGreekStory(validatedFields.data);
     
-    // Split story into sentences. This is a simple approach and assumes sentences end with a period.
-    const sentences = story.split('.').filter(s => s.trim().length > 0).map(s => s.trim() + '.');
-
-    if (sentences.length === 0) {
+    if (!sentences || sentences.length === 0) {
       return { error: 'Generated story was empty or could not be split into sentences.' };
     }
     
@@ -53,7 +51,10 @@ export async function generateStoryAction(
     
     const illustrations = illustrationResults.map(res => res.illustrationDataUri);
     
-    return { data: { story, illustrations } };
+    // Join sentences for a full story string, but also pass the array.
+    const story = sentences.join(' ');
+
+    return { data: { story, sentences, illustrations } };
 
   } catch (error) {
     console.error("Error in generateStoryAction:", error);
@@ -75,12 +76,18 @@ export async function saveStoryAction(
   }
 
   try {
+    // We only need to send story and illustrations to the backend.
+    const dataToSend = {
+      story: storyData.story,
+      illustrations: storyData.illustrations,
+    };
+
     const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(storyData),
+        body: JSON.stringify(dataToSend),
     });
 
     if (!response.ok) {

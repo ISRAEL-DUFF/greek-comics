@@ -18,10 +18,6 @@ interface StoryDisplayProps {
   isLoading: boolean;
 }
 
-const splitIntoSentences = (text: string): string[] => {
-  return text.match(/[^.!?]+[.!?]*/g) || [];
-};
-
 export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -104,7 +100,7 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
     );
   }
 
-  const sentences = splitIntoSentences(storyResult.data.story);
+  const { sentences, story, illustrations } = storyResult.data;
 
   return (
     <div className="space-y-8">
@@ -117,7 +113,7 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
             </Button>
           )}
           content={() => storyContentRef.current}
-          documentTitle={storyResult.data.story.substring(0, 30) || 'Ancient Greek Story'}
+          documentTitle={story.substring(0, 30) || 'Ancient Greek Story'}
         />
         <Button onClick={handleSaveStory} disabled={isSaving || isLoading} className="bg-accent text-accent-foreground hover:bg-accent/90">
           {isSaving ? (
@@ -130,7 +126,7 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
       </div>
       <div ref={storyContentRef} className="space-y-16">
         {sentences.map((sentence, index) => {
-          const illustration = storyResult.data?.illustrations?.[index];
+          const illustration = illustrations?.[index];
           const isImageRight = index % 2 === 0;
 
           return (

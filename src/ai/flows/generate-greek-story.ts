@@ -19,7 +19,7 @@ const GenerateGreekStoryInputSchema = z.object({
 export type GenerateGreekStoryInput = z.infer<typeof GenerateGreekStoryInputSchema>;
 
 const GenerateGreekStoryOutputSchema = z.object({
-  story: z.string().describe('The generated Ancient Greek story.'),
+  sentences: z.array(z.string()).describe('The generated Ancient Greek story, as an array of sentences.'),
 });
 export type GenerateGreekStoryOutput = z.infer<typeof GenerateGreekStoryOutputSchema>;
 
@@ -38,6 +38,8 @@ const generateGreekStoryPrompt = ai.definePrompt({
   Grammar Scope: {{{grammarScope}}}
 
 The story should be 3-10 sentences long and appropriate for the specified learner level. Use vocabulary and grammatical structures that are suitable for the level and grammar scope. The story should be coherent and engaging.
+
+You MUST return the story as an array of sentences in the 'sentences' field of the JSON output.
 `,
 });
 
