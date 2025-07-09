@@ -40,7 +40,7 @@ const generateStoryIllustrationFlow = ai.defineFlow(
     const {media} = await ai.generate({
       // IMPORTANT: ONLY the googleai/gemini-2.0-flash-preview-image-generation model is able to generate images. You MUST use exactly this model to generate images.
       model: 'googleai/gemini-2.0-flash-preview-image-generation',
-      prompt: `Generate an image that illustrates the following Ancient Greek sentence: {{{sentence}}}. The illustration should be in color and suitable for a children\'s story.`,    
+      prompt: `Generate an image that illustrates the following Ancient Greek sentence: "${input.sentence}". The illustration should be in color and suitable for a children's story.`,
       config: {
         responseModalities: ['TEXT', 'IMAGE'], // MUST provide both TEXT and IMAGE, IMAGE only won't work
       },
