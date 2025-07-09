@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import ReactToPrint from 'react-to-print';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Save, Loader2 } from 'lucide-react';
+import { AlertCircle, BookOpen, Save, Loader2, Download } from 'lucide-react';
 import type { StoryResult } from '@/app/actions';
 import { WordGloss } from './word-gloss';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,7 @@ const splitIntoSentences = (text: string): string[] => {
 export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const storyContentRef = useRef<HTMLDivElement>(null);
 
   const handleSaveStory = async () => {
     if (!storyResult?.data) return;
@@ -106,7 +108,17 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-end">
+      <div className="no-print flex justify-end gap-2">
+         <ReactToPrint
+          trigger={() => (
+            <Button variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
+          )}
+          content={() => storyContentRef.current}
+          documentTitle={storyResult.data.story.substring(0, 30) || 'Ancient Greek Story'}
+        />
         <Button onClick={handleSaveStory} disabled={isSaving || isLoading} className="bg-accent text-accent-foreground hover:bg-accent/90">
           {isSaving ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -116,7 +128,7 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
           {isSaving ? 'Saving...' : 'Save Story'}
         </Button>
       </div>
-      <div className="space-y-16">
+      <div ref={storyContentRef} className="space-y-16">
         {sentences.map((sentence, index) => {
           const illustration = storyResult.data?.illustrations?.[index];
           const isImageRight = index % 2 === 0;
@@ -124,7 +136,7 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
           return (
             <div
               key={index}
-              className="flex flex-col md:flex-row gap-8 items-center"
+              className="story-item flex flex-col md:flex-row gap-8 items-center"
             >
               {illustration && (
                 <div
@@ -140,7 +152,7 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
                     height={600}
                     className="rounded-lg object-cover shadow-lg aspect-square mx-auto"
                     data-ai-hint="ancient greece story"
-                    unoptimized={typeof window !== 'undefined'}
+                    unoptimized
                   />
                 </div>
               )}

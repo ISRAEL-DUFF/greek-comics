@@ -82,3 +82,23 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .story-item {
+    page-break-inside: avoid;
+  }
+
+  @page {
+    size: auto;
+    margin: 0.5in;
+  }
+}
