@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useReactToPrint } from 'react-to-print';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Download, AlertCircle, BookOpen } from 'lucide-react';
 import type { StoryResult } from '@/app/actions';
 import { WordGloss } from './word-gloss';
@@ -68,10 +68,10 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
   return (
     <div>
        <div className="no-print mb-4 flex justify-end">
-        <Button onClick={handlePrint}>
+        <button onClick={handlePrint} className={buttonVariants()}>
           <Download className="mr-2 h-4 w-4" />
           Save as PDF
-        </Button>
+        </button>
       </div>
       <div ref={storyContentRef} id="story-content" className="printable-area space-y-8">
         {sentences.map((sentence, index) => (
