@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, BookOpen } from 'lucide-react';
 import type { StoryResult } from '@/app/actions';
 import { WordGloss } from './word-gloss';
+import { cn } from '@/lib/utils';
 
 interface StoryDisplayProps {
   storyResult: StoryResult | null;
@@ -20,22 +21,24 @@ const splitIntoSentences = (text: string): string[] => {
 export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
   if (isLoading) {
     return (
-      <div className="space-y-12">
+      <div className="space-y-16">
         {[...Array(3)].map((_, i) => {
           const isImageRight = i % 2 === 0;
           return (
-            <div key={i} className="flex flex-col md:flex-row gap-8 items-start">
+            <div key={i} className="flex flex-col md:flex-row gap-8 items-center">
               <div
-                className={`w-full md:w-1/3 lg:w-1/4 ${
+                className={cn(
+                  'w-full md:w-1/2',
                   isImageRight ? 'md:order-2' : 'md:order-1'
-                }`}
+                )}
               >
                 <Skeleton className="w-full aspect-square rounded-lg" />
               </div>
               <div
-                className={`flex-1 space-y-3 ${
+                className={cn(
+                  'w-full md:w-1/2 space-y-3',
                   isImageRight ? 'md:order-1' : 'md:order-2'
-                }`}
+                )}
               >
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-5/6" />
@@ -83,27 +86,31 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
         return (
           <div
             key={index}
-            className="flex flex-col md:flex-row gap-8 items-start"
+            className="flex flex-col md:flex-row gap-8 items-center"
           >
             {illustration && (
               <div
-                className={`w-full md:w-1/3 lg:w-1/4 ${
+                className={cn(
+                  'w-full md:w-1/2',
                   isImageRight ? 'md:order-2' : 'md:order-1'
-                }`}
+                )}
               >
                 <Image
                   src={illustration}
                   alt={`Illustration for: ${sentence}`}
-                  width={400}
-                  height={400}
+                  width={600}
+                  height={600}
                   className="rounded-lg object-cover shadow-lg aspect-square mx-auto"
                   data-ai-hint="ancient greece story"
-                  unoptimized
+                  unoptimized={typeof window !== 'undefined'}
                 />
               </div>
             )}
             <div
-              className={`flex-1 ${isImageRight ? 'md:order-1' : 'md:order-2'}`}
+              className={cn(
+                'w-full md:w-1/2',
+                isImageRight ? 'md:order-1' : 'md:order-2'
+              )}
             >
               <p className="text-xl lg:text-2xl leading-relaxed lg:leading-loose lang-grc font-body">
                 {sentence.split(' ').map((word, i) => (
