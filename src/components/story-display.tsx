@@ -1,6 +1,8 @@
 'use client';
 
+import React, { useRef } from 'react';
 import Image from 'next/image';
+import { useReactToPrint } from 'react-to-print';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -18,10 +20,12 @@ const splitIntoSentences = (text: string): string[] => {
 };
 
 export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
+  const storyContentRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = useReactToPrint({
+    content: () => storyContentRef.current,
+    documentTitle: 'Hellenika-Komiks-Story',
+  });
 
   if (isLoading) {
     return (
@@ -69,7 +73,7 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
           Save as PDF
         </Button>
       </div>
-      <div id="story-content" className="printable-area space-y-8">
+      <div ref={storyContentRef} id="story-content" className="printable-area space-y-8">
         {sentences.map((sentence, index) => (
           <Card key={index} className="print-card overflow-hidden shadow-lg print:shadow-none transition-shadow duration-300 hover:shadow-xl">
              {storyResult.data?.illustrations?.[index] && (
