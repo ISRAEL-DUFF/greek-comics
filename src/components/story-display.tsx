@@ -1,13 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen } from 'lucide-react';
+import { AlertCircle, BookOpen, Save, Loader2 } from 'lucide-react';
 import type { StoryResult } from '@/app/actions';
 import { WordGloss } from './word-gloss';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { saveStoryAction } from '@/app/actions';
 
 interface StoryDisplayProps {
   storyResult: StoryResult | null;
@@ -19,6 +22,30 @@ const splitIntoSentences = (text: string): string[] => {
 };
 
 export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+
+  const handleSaveStory = async () => {
+    if (!storyResult?.data) return;
+
+    setIsSaving(true);
+    const result = await saveStoryAction(storyResult.data);
+    setIsSaving(false);
+
+    if (result.success) {
+      toast({
+        title: 'Story Saved!',
+        description: 'Your story has been successfully saved.',
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Save Failed',
+        description: result.error,
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-16">
@@ -78,49 +105,61 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
   const sentences = splitIntoSentences(storyResult.data.story);
 
   return (
-    <div className="space-y-16">
-      {sentences.map((sentence, index) => {
-        const illustration = storyResult.data?.illustrations?.[index];
-        const isImageRight = index % 2 === 0;
+    <div className="space-y-8">
+      <div className="flex justify-end">
+        <Button onClick={handleSaveStory} disabled={isSaving || isLoading} className="bg-accent text-accent-foreground hover:bg-accent/90">
+          {isSaving ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          {isSaving ? 'Saving...' : 'Save Story'}
+        </Button>
+      </div>
+      <div className="space-y-16">
+        {sentences.map((sentence, index) => {
+          const illustration = storyResult.data?.illustrations?.[index];
+          const isImageRight = index % 2 === 0;
 
-        return (
-          <div
-            key={index}
-            className="flex flex-col md:flex-row gap-8 items-center"
-          >
-            {illustration && (
+          return (
+            <div
+              key={index}
+              className="flex flex-col md:flex-row gap-8 items-center"
+            >
+              {illustration && (
+                <div
+                  className={cn(
+                    'w-full md:w-1/2',
+                    isImageRight ? 'md:order-2' : 'md:order-1'
+                  )}
+                >
+                  <Image
+                    src={illustration}
+                    alt={`Illustration for: ${sentence}`}
+                    width={600}
+                    height={600}
+                    className="rounded-lg object-cover shadow-lg aspect-square mx-auto"
+                    data-ai-hint="ancient greece story"
+                    unoptimized={typeof window !== 'undefined'}
+                  />
+                </div>
+              )}
               <div
                 className={cn(
                   'w-full md:w-1/2',
-                  isImageRight ? 'md:order-2' : 'md:order-1'
+                  isImageRight ? 'md:order-1' : 'md:order-2'
                 )}
               >
-                <Image
-                  src={illustration}
-                  alt={`Illustration for: ${sentence}`}
-                  width={600}
-                  height={600}
-                  className="rounded-lg object-cover shadow-lg aspect-square mx-auto"
-                  data-ai-hint="ancient greece story"
-                  unoptimized={typeof window !== 'undefined'}
-                />
+                <p className="text-xl lg:text-2xl leading-relaxed lg:leading-loose lang-grc font-body">
+                  {sentence.split(' ').map((word, i) => (
+                    <WordGloss key={i} word={word} />
+                  ))}
+                </p>
               </div>
-            )}
-            <div
-              className={cn(
-                'w-full md:w-1/2',
-                isImageRight ? 'md:order-1' : 'md:order-2'
-              )}
-            >
-              <p className="text-xl lg:text-2xl leading-relaxed lg:leading-loose lang-grc font-body">
-                {sentence.split(' ').map((word, i) => (
-                  <WordGloss key={i} word={word} />
-                ))}
-              </p>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
