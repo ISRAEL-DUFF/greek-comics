@@ -10,8 +10,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
+        body: ['"Gentium Book Plus"', 'serif'],
+        headline: ['"Gentium Book Plus"', 'serif'],
         code: ['monospace'],
       },
       colors: {
