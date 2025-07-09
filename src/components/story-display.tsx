@@ -71,7 +71,7 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
       </div>
       <div id="story-content" className="printable-area space-y-8">
         {sentences.map((sentence, index) => (
-          <Card key={index} className="print-card overflow-hidden shadow-lg transition-shadow duration-300 hover:shadow-xl">
+          <Card key={index} className="print-card overflow-hidden shadow-lg print:shadow-none transition-shadow duration-300 hover:shadow-xl">
              {storyResult.data?.illustrations?.[index] && (
               <div className="relative aspect-video w-full">
                 <Image
