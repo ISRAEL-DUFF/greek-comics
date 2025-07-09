@@ -1,12 +1,10 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React from 'react';
 import Image from 'next/image';
-import { useReactToPrint } from 'react-to-print';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { buttonVariants } from '@/components/ui/button';
-import { Download, AlertCircle, BookOpen } from 'lucide-react';
+import { AlertCircle, BookOpen } from 'lucide-react';
 import type { StoryResult } from '@/app/actions';
 import { WordGloss } from './word-gloss';
 
@@ -20,25 +18,32 @@ const splitIntoSentences = (text: string): string[] => {
 };
 
 export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
-  const storyContentRef = useRef<HTMLDivElement>(null);
-
-  const handlePrint = useReactToPrint({
-    content: () => storyContentRef.current,
-    documentTitle: 'Hellenika-Komiks-Story',
-  });
-
   if (isLoading) {
     return (
-      <div className="space-y-8">
-        {[...Array(3)].map((_, i) => (
-          <Card key={i} className="overflow-hidden shadow-md">
-            <Skeleton className="h-64 w-full" />
-            <CardContent className="p-6">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="mt-2 h-4 w-1/2" />
-            </CardContent>
-          </Card>
-        ))}
+      <div className="space-y-12">
+        {[...Array(3)].map((_, i) => {
+          const isImageRight = i % 2 === 0;
+          return (
+            <div key={i} className="flex flex-col md:flex-row gap-8 items-start">
+              <div
+                className={`w-full md:w-1/3 lg:w-1/4 ${
+                  isImageRight ? 'md:order-2' : 'md:order-1'
+                }`}
+              >
+                <Skeleton className="w-full aspect-square rounded-lg" />
+              </div>
+              <div
+                className={`flex-1 space-y-3 ${
+                  isImageRight ? 'md:order-1' : 'md:order-2'
+                }`}
+              >
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-5/6" />
+                <Skeleton className="h-5 w-3/4" />
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -57,48 +62,58 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
     return (
       <Card className="flex flex-col items-center justify-center p-8 text-center border-dashed">
         <BookOpen className="h-16 w-16 text-muted-foreground/50" />
-        <h3 className="mt-4 text-xl font-semibold font-headline">Your Story Awaits</h3>
-        <p className="mt-2 text-muted-foreground">Use the form to generate your first illustrated Ancient Greek story.</p>
+        <h3 className="mt-4 text-xl font-semibold font-headline">
+          Your Story Awaits
+        </h3>
+        <p className="mt-2 text-muted-foreground">
+          Use the form to generate your first illustrated Ancient Greek story.
+        </p>
       </Card>
     );
   }
-  
+
   const sentences = splitIntoSentences(storyResult.data.story);
 
   return (
-    <div>
-       <div className="no-print mb-4 flex justify-end">
-        <button onClick={handlePrint} className={buttonVariants()}>
-          <Download className="mr-2 h-4 w-4" />
-          Save as PDF
-        </button>
-      </div>
-      <div ref={storyContentRef} id="story-content" className="printable-area space-y-8">
-        {sentences.map((sentence, index) => (
-          <Card key={index} className="print-card overflow-hidden shadow-lg print:shadow-none transition-shadow duration-300 hover:shadow-xl">
-             {storyResult.data?.illustrations?.[index] && (
-              <div className="relative aspect-video w-full">
+    <div className="space-y-16">
+      {sentences.map((sentence, index) => {
+        const illustration = storyResult.data?.illustrations?.[index];
+        const isImageRight = index % 2 === 0;
+
+        return (
+          <div
+            key={index}
+            className="flex flex-col md:flex-row gap-8 items-start"
+          >
+            {illustration && (
+              <div
+                className={`w-full md:w-1/3 lg:w-1/4 ${
+                  isImageRight ? 'md:order-2' : 'md:order-1'
+                }`}
+              >
                 <Image
-                  src={storyResult.data.illustrations[index]}
+                  src={illustration}
                   alt={`Illustration for: ${sentence}`}
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  className="object-cover"
+                  width={400}
+                  height={400}
+                  className="rounded-lg object-cover shadow-lg aspect-square mx-auto"
                   data-ai-hint="ancient greece story"
                   unoptimized
                 />
               </div>
             )}
-            <CardContent className="p-6">
-              <p className="text-xl leading-relaxed lang-grc">
+            <div
+              className={`flex-1 ${isImageRight ? 'md:order-1' : 'md:order-2'}`}
+            >
+              <p className="text-xl lg:text-2xl leading-relaxed lg:leading-loose lang-grc font-body">
                 {sentence.split(' ').map((word, i) => (
-                   <WordGloss key={i} word={word} />
+                  <WordGloss key={i} word={word} />
                 ))}
               </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
