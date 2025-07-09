@@ -3,8 +3,6 @@
 import { StoryFormSchema } from '@/lib/schemas';
 import { generateGreekStory } from '@/ai/flows/generate-greek-story';
 import { generateStoryIllustration } from '@/ai/flows/generate-story-illustration';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export type StoryData = {
   story: string;
@@ -20,7 +18,6 @@ export type StoryResult = {
 export type SaveResult = {
   success?: boolean;
   error?: string;
-  docId?: string;
 };
 
 export async function generateStoryAction(
@@ -71,15 +68,31 @@ export async function saveStoryAction(
     return { error: 'Invalid story data provided.' };
   }
 
+  const apiUrl = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_API_URL;
+  if (!apiUrl) {
+    console.error("Custom backend API URL is not configured.");
+    return { error: 'The application is not configured to save stories. Please contact the administrator.' };
+  }
+
   try {
-    const docRef = await addDoc(collection(db, "stories"), {
-      ...storyData,
-      createdAt: serverTimestamp(),
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(storyData),
     });
-    return { success: true, docId: docRef.id };
+
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error("Error saving story to custom backend:", response.statusText, errorData);
+        return { error: `Failed to save story. The server responded with: ${response.statusText}` };
+    }
+
+    return { success: true };
+
   } catch (error) {
-    console.error("Error saving story to Firestore:", error);
-    // This could be a configuration error, so provide a helpful message.
-    return { error: 'Failed to save the story. Please ensure your Firebase configuration is correct and Firestore is enabled.' };
+    console.error("Error calling custom backend API:", error);
+    return { error: 'An unexpected error occurred while trying to save the story.' };
   }
 }
