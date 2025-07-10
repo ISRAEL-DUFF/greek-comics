@@ -1,13 +1,46 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StoryGeneratorForm } from '@/components/story-generator-form';
 import { StoryDisplay } from '@/components/story-display';
-import type { StoryResult } from '@/app/actions';
+import type { StoryResult, SavedStory } from '@/app/actions';
+import { getSavedStoriesAction } from '@/app/actions';
+import { SavedStoriesList } from '@/components/saved-stories-list';
 
 export default function Home() {
   const [storyResult, setStoryResult] = useState<StoryResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [savedStories, setSavedStories] = useState<SavedStory[]>([]);
+  const [currentStoryId, setCurrentStoryId] = useState<number | null>(null);
+
+  const fetchSavedStories = async () => {
+    const stories = await getSavedStoriesAction();
+    setSavedStories(stories);
+  };
+
+  useEffect(() => {
+    fetchSavedStories();
+  }, []);
+
+  const handleStoryGenerated = (result: StoryResult) => {
+    setStoryResult(result);
+    setCurrentStoryId(null); 
+  };
+  
+  const handleStorySaved = () => {
+    fetchSavedStories();
+  };
+  
+  const handleSelectStory = (story: SavedStory) => {
+    setStoryResult({
+      data: {
+        story: story.story,
+        sentences: story.story.match(/[^.!?]+[.!?]+/g) || [story.story],
+        illustrations: story.illustrations,
+      },
+    });
+    setCurrentStoryId(story.id);
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -20,16 +53,25 @@ export default function Home() {
       <main className="container mx-auto flex-1 px-4 py-8">
         <div className="grid gap-12 lg:grid-cols-12">
           <aside className="no-print lg:col-span-4 xl:col-span-3">
-             <div className="sticky top-24">
+             <div className="sticky top-24 space-y-8">
                 <StoryGeneratorForm 
-                  setStoryResult={setStoryResult} 
+                  setStoryResult={handleStoryGenerated} 
                   setIsLoading={setIsLoading} 
                   isLoading={isLoading} 
+                />
+                <SavedStoriesList 
+                  stories={savedStories} 
+                  onSelectStory={handleSelectStory} 
+                  currentStoryId={currentStoryId}
                 />
              </div>
           </aside>
           <div className="lg:col-span-8 xl:col-span-9">
-            <StoryDisplay storyResult={storyResult} isLoading={isLoading} />
+            <StoryDisplay 
+              storyResult={storyResult} 
+              isLoading={isLoading} 
+              onStorySaved={handleStorySaved} 
+            />
           </div>
         </div>
       </main>

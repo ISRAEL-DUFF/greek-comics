@@ -16,9 +16,10 @@ import { saveStoryAction } from '@/app/actions';
 interface StoryDisplayProps {
   storyResult: StoryResult | null;
   isLoading: boolean;
+  onStorySaved: () => void;
 }
 
-export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
+export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisplayProps) {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const storyContentRef = useRef<HTMLDivElement>(null);
@@ -33,8 +34,9 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
     if (result.success) {
       toast({
         title: 'Story Saved!',
-        description: 'Your story has been successfully saved.',
+        description: 'Your story has been successfully saved to Supabase.',
       });
+      onStorySaved();
     } else {
       toast({
         variant: 'destructive',
@@ -94,7 +96,7 @@ export function StoryDisplay({ storyResult, isLoading }: StoryDisplayProps) {
           Your Story Awaits
         </h3>
         <p className="mt-2 text-muted-foreground">
-          Use the form to generate your first illustrated Ancient Greek story.
+          Use the form to generate a new illustrated story, or select a saved one.
         </p>
       </Card>
     );

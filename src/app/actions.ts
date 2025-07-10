@@ -3,10 +3,18 @@
 import { StoryFormSchema } from '@/lib/schemas';
 import { generateGreekStory } from '@/ai/flows/generate-greek-story';
 import { generateStoryIllustration } from '@/ai/flows/generate-story-illustration';
+import { supabase } from '@/lib/supabase';
 
 export type StoryData = {
   story: string;
   sentences: string[];
+  illustrations: string[];
+}
+
+export type SavedStory = {
+  id: number;
+  created_at: string;
+  story: string;
   illustrations: string[];
 }
 
@@ -69,37 +77,41 @@ export async function saveStoryAction(
     return { error: 'Invalid story data provided.' };
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_API_URL;
-  if (!apiUrl) {
-    console.error("Custom backend API URL is not configured.");
-    return { error: 'The application is not configured to save stories. Please contact the administrator.' };
-  }
-
   try {
-    // We only need to send story and illustrations to the backend.
-    const dataToSend = {
-      story: storyData.story,
-      illustrations: storyData.illustrations,
-    };
+    const { error } = await supabase
+      .from('stories')
+      .insert([
+        { story: storyData.story, illustrations: storyData.illustrations },
+      ]);
 
-    const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToSend),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error("Error saving story to custom backend:", response.statusText, errorData);
-        return { error: `Failed to save story. The server responded with: ${response.statusText}` };
+    if (error) {
+      console.error("Error saving story to Supabase:", error);
+      return { error: `Failed to save story: ${error.message}` };
     }
 
     return { success: true };
 
-  } catch (error) {
-    console.error("Error calling custom backend API:", error);
+  } catch (error: any) {
+    console.error("Error calling Supabase:", error);
     return { error: 'An unexpected error occurred while trying to save the story.' };
+  }
+}
+
+export async function getSavedStoriesAction(): Promise<SavedStory[]> {
+  try {
+    const { data, error } = await supabase
+      .from('stories')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Error fetching stories from Supabase:", error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error("Error in getSavedStoriesAction:", error);
+    return [];
   }
 }
