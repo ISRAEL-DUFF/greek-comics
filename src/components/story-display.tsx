@@ -132,7 +132,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
           </Button>
         )}
       </div>
-      <div ref={storyContentRef} className="print-container space-y-16">
+      <div ref={storyContentRef} className="print-container space-y-12 md:space-y-16">
         {sentences.map((sentence, index) => {
           const illustration = illustrations?.[index];
           const isImageRight = index % 2 === 0;
@@ -140,12 +140,12 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
           return (
             <div
               key={index}
-              className="story-item flex flex-col md:flex-row gap-8 items-center"
+              className="story-item grid grid-cols-1 md:grid-cols-2 gap-8 items-center"
             >
               {illustration && (
                 <div
                   className={cn(
-                    'w-full md:w-1/2',
+                    'w-full',
                     isImageRight ? 'md:order-2' : 'md:order-1'
                   )}
                 >
@@ -154,7 +154,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
                     alt={`Illustration for: ${sentence}`}
                     width={600}
                     height={600}
-                    className="rounded-lg object-cover shadow-lg aspect-square mx-auto"
+                    className="rounded-lg object-cover shadow-lg aspect-square w-full h-auto"
                     data-ai-hint="ancient greece story"
                     unoptimized
                   />
@@ -162,7 +162,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
               )}
               <div
                 className={cn(
-                  'w-full md:w-1/2',
+                  'w-full',
                   isImageRight ? 'md:order-1' : 'md:order-2'
                 )}
               >
