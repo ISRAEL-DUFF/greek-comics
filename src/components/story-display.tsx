@@ -3,36 +3,36 @@
 import React, { useRef, useState } from 'react';
 import ReactToPrint from 'react-to-print';
 import Image from 'next/image';
-import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, BookOpen, Save, Loader2, Download } from 'lucide-react';
-import type { StoryResult } from '@/app/actions';
+import type { StoryData } from '@/app/actions';
 import { WordGloss } from './word-gloss';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { saveStoryAction } from '@/app/actions';
 
 interface StoryDisplayProps {
-  storyResult: StoryResult | null;
+  storyData: StoryData | null;
   isLoading: boolean;
   onStorySaved: () => void;
+  error?: string | null;
 }
 
 // Supabase is checked in the action, but we can disable the button here too
 const isSupabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 
-export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisplayProps) {
+export function StoryDisplay({ storyData, isLoading, onStorySaved, error }: StoryDisplayProps) {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const storyContentRef = useRef<HTMLDivElement>(null);
 
   const handleSaveStory = async () => {
-    if (!storyResult?.data) return;
+    if (!storyData) return;
 
     setIsSaving(true);
-    const result = await saveStoryAction(storyResult.data);
+    const result = await saveStoryAction(storyData);
     setIsSaving(false);
 
     if (result.success) {
@@ -56,10 +56,10 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
         {[...Array(3)].map((_, i) => {
           const isImageRight = i % 2 === 0;
           return (
-            <div key={i} className="flex flex-col md:flex-row gap-8 items-center">
+            <div key={i} className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div
                 className={cn(
-                  'w-full md:w-1/2',
+                  'w-full',
                   isImageRight ? 'md:order-2' : 'md:order-1'
                 )}
               >
@@ -67,7 +67,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
               </div>
               <div
                 className={cn(
-                  'w-full md:w-1/2 space-y-3',
+                  'w-full space-y-3',
                   isImageRight ? 'md:order-1' : 'md:order-2'
                 )}
               >
@@ -82,19 +82,19 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
     );
   }
 
-  if (storyResult?.error) {
+  if (error) {
     return (
-      <Card className="flex flex-col items-center justify-center p-8 text-center">
+      <div className="flex flex-col items-center justify-center p-8 text-center h-full">
         <AlertCircle className="h-12 w-12 text-destructive" />
         <h3 className="mt-4 text-xl font-semibold">Generation Failed</h3>
-        <p className="mt-2 text-muted-foreground">{storyResult.error}</p>
-      </Card>
+        <p className="mt-2 text-muted-foreground">{error}</p>
+      </div>
     );
   }
 
-  if (!storyResult?.data) {
+  if (!storyData) {
     return (
-      <Card className="flex flex-col items-center justify-center p-8 text-center border-dashed">
+      <div className="flex flex-col items-center justify-center p-8 text-center h-full">
         <BookOpen className="h-16 w-16 text-muted-foreground/50" />
         <h3 className="mt-4 text-xl font-semibold font-headline">
           Your Story Awaits
@@ -102,21 +102,21 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
         <p className="mt-2 text-muted-foreground">
           Use the form to generate a new illustrated story, or select a saved one.
         </p>
-      </Card>
+      </div>
     );
   }
 
-  const { sentences, story, illustrations } = storyResult.data;
+  const { sentences, story, illustrations } = storyData;
 
   return (
-    <div className="space-y-8">
-      <div className="no-print flex justify-end gap-2">
+    <div className="space-y-8 h-full">
+      <div className="no-print flex justify-end gap-2 p-4 absolute top-0 right-0">
          <ReactToPrint
           trigger={() => (
-            <Button variant="outline">
+            <button className={buttonVariants({ variant: 'outline' })}>
               <Download className="mr-2 h-4 w-4" />
               Download PDF
-            </Button>
+            </button>
           )}
           content={() => storyContentRef.current}
           documentTitle={story.substring(0, 30) || 'Ancient Greek Story'}
@@ -132,7 +132,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
           </Button>
         )}
       </div>
-      <div ref={storyContentRef} className="print-container space-y-12 md:space-y-16">
+      <div ref={storyContentRef} className="print-container space-y-12 md:space-y-16 pt-16">
         {sentences.map((sentence, index) => {
           const illustration = illustrations?.[index];
           const isImageRight = index % 2 === 0;
