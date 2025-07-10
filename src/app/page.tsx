@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react';
 import { StoryGeneratorForm } from '@/components/story-generator-form';
 import { StoryDisplay } from '@/components/story-display';
-import type { StoryResult, SavedStory } from '@/app/actions';
-import { getSavedStoriesAction } from '@/app/actions';
+import type { StoryResult, SavedStoryListItem } from '@/app/actions';
+import { getSavedStoriesAction, getStoryByIdAction } from '@/app/actions';
 import { SavedStoriesList } from '@/components/saved-stories-list';
 
 export default function Home() {
   const [storyResult, setStoryResult] = useState<StoryResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [savedStories, setSavedStories] = useState<SavedStory[]>([]);
+  const [isLoadingSaved, setIsLoadingSaved] = useState(false);
+  const [savedStories, setSavedStories] = useState<SavedStoryListItem[]>([]);
   const [currentStoryId, setCurrentStoryId] = useState<number | null>(null);
 
   const fetchSavedStories = async () => {
@@ -31,15 +32,28 @@ export default function Home() {
     fetchSavedStories();
   };
   
-  const handleSelectStory = (story: SavedStory) => {
-    setStoryResult({
-      data: {
-        story: story.story,
-        sentences: story.story.match(/[^.!?]+[.!?]+/g) || [story.story],
-        illustrations: story.illustrations,
-      },
-    });
-    setCurrentStoryId(story.id);
+  const handleSelectStory = async (storyListItem: SavedStoryListItem) => {
+    setIsLoadingSaved(true);
+    setCurrentStoryId(storyListItem.id);
+    setStoryResult(null); // Clear previous story
+
+    const fullStory = await getStoryByIdAction(storyListItem.id);
+    
+    if (fullStory) {
+      setStoryResult({
+        data: {
+          story: fullStory.story,
+          // Simple sentence splitting for display.
+          sentences: fullStory.story.match(/[^.!?]+[.!?]+/g) || [fullStory.story],
+          illustrations: fullStory.illustrations,
+        },
+      });
+    } else {
+      setStoryResult({
+        error: "Could not load the selected story. It may have been deleted."
+      });
+    }
+    setIsLoadingSaved(false);
   };
 
   return (
@@ -69,7 +83,7 @@ export default function Home() {
           <div className="lg:col-span-8 xl:col-span-9">
             <StoryDisplay 
               storyResult={storyResult} 
-              isLoading={isLoading} 
+              isLoading={isLoading || isLoadingSaved} 
               onStorySaved={handleStorySaved} 
             />
           </div>
