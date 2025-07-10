@@ -5,6 +5,8 @@ import { generateGreekStory } from '@/ai/flows/generate-greek-story';
 import { generateStoryIllustration } from '@/ai/flows/generate-story-illustration';
 import { supabase } from '@/lib/supabase';
 
+const STORY_TABLE = 'comic_stories';
+
 export type StoryData = {
   story: string;
   sentences: string[];
@@ -83,7 +85,7 @@ export async function saveStoryAction(
 
   try {
     const { error } = await supabase
-      .from('stories')
+      .from(STORY_TABLE)
       .insert([
         { story: storyData.story, illustrations: storyData.illustrations },
       ]);
@@ -108,7 +110,7 @@ export async function getSavedStoriesAction(): Promise<SavedStory[]> {
   
   try {
     const { data, error } = await supabase
-      .from('stories')
+      .from(STORY_TABLE)
       .select('*')
       .order('created_at', { ascending: false });
 
