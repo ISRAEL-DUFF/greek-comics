@@ -26,9 +26,8 @@ export function StoryModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent 
         className={cn(
-          "flex flex-col p-0 max-w-none",
-          "md:w-[90vw] md:h-[90vh] md:rounded-lg",
-          "w-screen h-screen rounded-none"
+          "flex flex-col p-0 max-w-full h-full w-full rounded-none border-none",
+          "md:max-w-7xl md:h-[90vh] md:rounded-lg md:border"
         )}
       >
         <ScrollArea className="h-full w-full">
