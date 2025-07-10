@@ -13,12 +13,17 @@ export type StoryData = {
   illustrations: string[];
 }
 
+// Type for the full story data, including illustrations
 export type SavedStory = {
   id: number;
   created_at: string;
   story: string;
   illustrations: string[];
 }
+
+// Type for the list item, without illustrations for performance
+export type SavedStoryListItem = Omit<SavedStory, 'illustrations'>;
+
 
 export type StoryResult = {
   data?: StoryData;
@@ -103,15 +108,17 @@ export async function saveStoryAction(
   }
 }
 
-export async function getSavedStoriesAction(): Promise<SavedStory[]> {
+// Fetches only the list of stories without illustrations
+export async function getSavedStoriesAction(): Promise<SavedStoryListItem[]> {
   if (!supabase) {
     return [];
   }
   
   try {
+    // Select only the necessary fields for the list view
     const { data, error } = await supabase
       .from(STORY_TABLE)
-      .select('*')
+      .select('id, created_at, story')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -123,5 +130,31 @@ export async function getSavedStoriesAction(): Promise<SavedStory[]> {
   } catch (error) {
     console.error("Error in getSavedStoriesAction:", error);
     return [];
+  }
+}
+
+
+// Fetches a single, complete story by its ID
+export async function getStoryByIdAction(id: number): Promise<SavedStory | null> {
+  if (!supabase) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from(STORY_TABLE)
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error(`Error fetching story with id ${id}:`, error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error(`Error in getStoryByIdAction for id ${id}:`, error);
+    return null;
   }
 }

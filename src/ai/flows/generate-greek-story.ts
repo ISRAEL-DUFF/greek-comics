@@ -31,7 +31,7 @@ const generateGreekStoryPrompt = ai.definePrompt({
   name: 'generateGreekStoryPrompt',
   input: {schema: GenerateGreekStoryInputSchema},
   output: {schema: GenerateGreekStoryOutputSchema},
-  prompt: `You are an expert in Ancient Greek language and literature. Your task is to generate a short story in Ancient Greek based on the user's specifications.
+  prompt: `You are an expert in Ancient Greek language and literature. Your task is to generate a story in Ancient Greek based on the user's specifications.
 
   Level: {{{level}}}
   Topic: {{{topic}}}

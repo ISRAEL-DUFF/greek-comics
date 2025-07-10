@@ -1,6 +1,6 @@
 'use client';
 
-import type { SavedStory } from "@/app/actions";
+import type { SavedStoryListItem } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from "@/lib/utils";
 
 interface SavedStoriesListProps {
-  stories: SavedStory[];
-  onSelectStory: (story: SavedStory) => void;
+  stories: SavedStoryListItem[];
+  onSelectStory: (story: SavedStoryListItem) => void;
   currentStoryId: number | null;
 }
 
