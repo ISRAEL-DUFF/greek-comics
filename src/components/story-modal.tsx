@@ -3,13 +3,11 @@
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { StoryDisplay } from './story-display';
 import type { StoryData } from '@/app/actions';
 import { ScrollArea } from './ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface StoryModalProps {
   isOpen: boolean;
@@ -26,7 +24,13 @@ export function StoryModal({
 }: StoryModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-none w-[90vw] h-[90vh] flex flex-col p-0">
+      <DialogContent 
+        className={cn(
+          "flex flex-col p-0 max-w-none",
+          "md:w-[90vw] md:h-[90vh] md:rounded-lg",
+          "w-screen h-screen rounded-none"
+        )}
+      >
         <ScrollArea className="h-full w-full">
            <div className="p-8 md:p-12">
              <StoryDisplay
