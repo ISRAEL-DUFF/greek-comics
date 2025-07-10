@@ -14,7 +14,13 @@ interface SavedStoriesListProps {
   currentStoryId: number | null;
 }
 
+const isSupabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
 export function SavedStoriesList({ stories, onSelectStory, currentStoryId }: SavedStoriesListProps) {
+  if (!isSupabaseEnabled) {
+    return null;
+  }
+  
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -52,6 +58,7 @@ export function SavedStoriesList({ stories, onSelectStory, currentStoryId }: Sav
           ) : (
             <div className="text-center text-muted-foreground p-4">
               <p>You haven't saved any stories yet.</p>
+              <p className="text-xs">Once you save a story, it will appear here.</p>
             </div>
           )}
         </ScrollArea>

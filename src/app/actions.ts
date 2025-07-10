@@ -73,6 +73,10 @@ export async function generateStoryAction(
 export async function saveStoryAction(
   storyData: StoryData
 ): Promise<SaveResult> {
+  if (!supabase) {
+    return { error: 'Supabase is not configured. Cannot save story.' };
+  }
+  
   if (!storyData || !storyData.story || !storyData.illustrations) {
     return { error: 'Invalid story data provided.' };
   }
@@ -98,6 +102,10 @@ export async function saveStoryAction(
 }
 
 export async function getSavedStoriesAction(): Promise<SavedStory[]> {
+  if (!supabase) {
+    return [];
+  }
+  
   try {
     const { data, error } = await supabase
       .from('stories')

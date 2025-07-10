@@ -19,6 +19,10 @@ interface StoryDisplayProps {
   onStorySaved: () => void;
 }
 
+// Supabase is checked in the action, but we can disable the button here too
+const isSupabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+
 export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisplayProps) {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -34,7 +38,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
     if (result.success) {
       toast({
         title: 'Story Saved!',
-        description: 'Your story has been successfully saved to Supabase.',
+        description: 'Your story has been successfully saved.',
       });
       onStorySaved();
     } else {
@@ -117,16 +121,18 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
           content={() => storyContentRef.current}
           documentTitle={story.substring(0, 30) || 'Ancient Greek Story'}
         />
-        <Button onClick={handleSaveStory} disabled={isSaving || isLoading} className="bg-accent text-accent-foreground hover:bg-accent/90">
-          {isSaving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {isSaving ? 'Saving...' : 'Save Story'}
-        </Button>
+        {isSupabaseEnabled && (
+          <Button onClick={handleSaveStory} disabled={isSaving || isLoading} className="bg-accent text-accent-foreground hover:bg-accent/90">
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {isSaving ? 'Saving...' : 'Save Story'}
+          </Button>
+        )}
       </div>
-      <div ref={storyContentRef} className="space-y-16">
+      <div ref={storyContentRef} className="print-container space-y-16">
         {sentences.map((sentence, index) => {
           const illustration = illustrations?.[index];
           const isImageRight = index % 2 === 0;
