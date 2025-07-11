@@ -10,13 +10,21 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { GlossStoryOutputSchema } from '@/lib/schemas';
+import { GlossWordOutputSchema, GlossStoryOutputSchema } from '@/lib/schemas';
 
 const GlossStoryInputSchema = z.object({
   story: z.string().describe('The Ancient Greek story to be glossed.'),
 });
 export type GlossStoryInput = z.infer<typeof GlossStoryInputSchema>;
 export type GlossStoryOutput = z.infer<typeof GlossStoryOutputSchema>;
+
+
+const GlossStoryInternalOutputSchema = z.object({
+    glosses: z.array(z.object({
+        word: z.string().describe('The word from the story.'),
+        gloss: GlossWordOutputSchema.describe('The gloss for the word.'),
+    })).describe('An array of word-gloss pairs.')
+});
 
 export async function glossStory(input: GlossStoryInput): Promise<GlossStoryOutput> {
   return glossStoryFlow(input);
@@ -25,10 +33,10 @@ export async function glossStory(input: GlossStoryInput): Promise<GlossStoryOutp
 const glossStoryPrompt = ai.definePrompt({
   name: 'glossStoryPrompt',
   input: {schema: GlossStoryInputSchema},
-  output: {schema: GlossStoryOutputSchema},
+  output: {schema: GlossStoryInternalOutputSchema},
   prompt: `You are an expert Ancient Greek lexicographer. For the given story, identify all unique words. For each unique word, provide its dictionary form (lemma), its part of speech, and a concise English definition.
   
-  The output should be a JSON object where each key is a unique, lowercased word from the text and the value is an object containing its lemma, partOfSpeech, and definition.
+  The output should be a JSON object containing a 'glosses' field, which is an array of objects. Each object in the array should have a 'word' and a 'gloss' containing its lemma, partOfSpeech, and definition.
   
   Story:
   {{{story}}}
@@ -53,8 +61,19 @@ const glossStoryFlow = ai.defineFlow(
       )
     );
 
-    // Rejoin the unique words to pass to the prompt. This can be more efficient than sending the whole story if the story is long and has many repeated words.
+    // Rejoin the unique words to pass to the prompt.
     const {output} = await glossStoryPrompt({story: uniqueWords.join(' ')});
-    return output!;
+    
+    if (!output) {
+        return {};
+    }
+
+    // Transform the array of glosses back into the map format the application expects.
+    const glossMap: GlossStoryOutput = {};
+    for (const item of output.glosses) {
+        glossMap[item.word.toLowerCase()] = item.gloss;
+    }
+
+    return glossMap;
   }
 );
