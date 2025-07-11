@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import ReactToPrint from 'react-to-print';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -106,21 +105,11 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
     );
   }
 
-  const { sentences, story, illustrations } = storyResult.data;
+  const { sentences, illustrations, glosses } = storyResult.data;
 
   return (
     <div className="space-y-8">
       <div className="no-print flex justify-end gap-2">
-         {/* <ReactToPrint
-          trigger={() => (
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              Download PDF
-            </Button>
-          )}
-          content={() => storyContentRef.current}
-          documentTitle={story.substring(0, 30) || 'Ancient Greek Story'}
-        /> */}
         <Button variant="outline" onClick={() => window.print()}>
           <Download className="mr-2 h-4 w-4" />
           Download PDF
@@ -172,7 +161,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
               >
                 <p className="text-xl lg:text-2xl leading-relaxed lg:leading-loose lang-grc font-body">
                   {sentence.split(' ').map((word, i) => (
-                    <WordGloss key={i} word={word} />
+                    <WordGloss key={i} word={word} glosses={glosses} />
                   ))}
                 </p>
               </div>

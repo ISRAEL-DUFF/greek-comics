@@ -39,20 +39,20 @@ export function SavedStoriesList({ stories, onSelectStory, currentStoryId }: Sav
                   key={story.id}
                   variant={story.id === currentStoryId ? "secondary" : "ghost"}
                   className={cn(
-                    "w-[70vw] justify-start h-auto py-2 px-3 text-left",
+                    "w-[70vw] lg:w-full justify-start h-auto py-2 px-3 text-left",
                     story.id === currentStoryId && "bg-accent/20"
                   )}
                   onClick={() => onSelectStory(story)}
                 >
-                  <div>
-                    <p className="font-semibold truncate">
-                      {story.topic.substring(0, 40)}...
+                  <div className="w-full">
+                    <p className="font-semibold truncate w-full">
+                      {story.topic || 'Untitled Story'}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {story.level} (Saved {formatDistanceToNow(new Date(story.created_at), { addSuffix: true })})
+                      {story.level} &bull; Saved {formatDistanceToNow(new Date(story.created_at), { addSuffix: true })}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Grammar Scope: {story.grammar_scope}
+                    <p className="text-xs text-muted-foreground truncate w-full">
+                      {story.grammar_scope}
                     </p>
                   </div>
                 </Button>

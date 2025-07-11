@@ -5,21 +5,29 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import type { GlossStoryOutput } from '@/ai/flows/gloss-story-flow';
 
 interface WordGlossProps {
   word: string;
+  glosses: GlossStoryOutput;
 }
 
-export function WordGloss({ word }: WordGlossProps) {
+export function WordGloss({ word, glosses }: WordGlossProps) {
   if (!word) {
     return null;
   }
   
-  // This is a simple way to separate punctuation from the word for the trigger styling.
   const match = word.match(/^([.,·;]?)(.*?)([.,·;]?)$/);
   const leadingPunct = match?.[1] || '';
   const mainWord = match?.[2] || word;
   const trailingPunct = match?.[3] || '';
+
+  const normalizedWord = mainWord.toLowerCase();
+  const glossData = glosses[normalizedWord];
+
+  if (!glossData) {
+    return <>{word}{' '}</>;
+  }
 
   return (
     <>
@@ -31,11 +39,11 @@ export function WordGloss({ word }: WordGlossProps) {
           </span>
         </PopoverTrigger>
         <PopoverContent className="w-auto max-w-xs p-3 text-sm" side="top" align="center">
-          <p>
-            <span className="font-semibold">Gloss for "{mainWord}"</span>
-            <br />
-            (Feature coming soon)
-          </p>
+          <div className="space-y-1">
+            <p className="font-bold">{glossData.lemma}</p>
+            <p className="text-xs italic text-muted-foreground">{glossData.partOfSpeech}</p>
+            <p>{glossData.definition}</p>
+          </div>
         </PopoverContent>
       </Popover>
       {trailingPunct}{' '}
