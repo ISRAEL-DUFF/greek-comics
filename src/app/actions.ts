@@ -3,6 +3,7 @@
 import { StoryFormSchema } from '@/lib/schemas';
 import { generateGreekStory } from '@/ai/flows/generate-greek-story';
 import { generateStoryIllustration } from '@/ai/flows/generate-story-illustration';
+import { glossWord, GlossWordOutput } from '@/ai/flows/gloss-word';
 import { supabase } from '@/lib/supabase';
 
 // generateGif.js
@@ -214,5 +215,24 @@ export async function getStoryByIdAction(id: number): Promise<SavedStory | null>
   } catch (error) {
     console.error(`Error in getStoryByIdAction for id ${id}:`, error);
     return null;
+  }
+}
+
+export type GlossResult = {
+  data?: GlossWordOutput;
+  error?: string;
+};
+
+export async function getWordGlossAction(word: string): Promise<GlossResult> {
+  if (!word) {
+    return { error: 'No word provided.' };
+  }
+
+  try {
+    const gloss = await glossWord({ word });
+    return { data: gloss };
+  } catch (error) {
+    console.error(`Error glossing word "${word}":`, error);
+    return { error: 'Could not retrieve definition.' };
   }
 }
