@@ -72,7 +72,7 @@ export type SavedStory = {
 }
 
 // Type for the list item, without illustrations for performance
-export type SavedStoryListItem = Omit<Omit<SavedStory, 'illustrations'>, 'story'>;
+export type SavedStoryListItem = Pick<SavedStory, 'id' | 'created_at' | 'topic' | 'level' | 'grammar_scope'>;
 
 
 export type StoryResult = {
