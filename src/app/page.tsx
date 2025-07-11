@@ -50,7 +50,8 @@ export default function Home() {
           illustrations: fullStory.illustrations,
           level: fullStory.level,
           topic: fullStory.topic,
-          grammar_scope: fullStory.grammar_scope
+          grammar_scope: fullStory.grammar_scope,
+          glosses: fullStory.glosses || {},
         },
       });
     } else {

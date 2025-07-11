@@ -10,17 +10,12 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { GlossWordOutputSchema } from '@/lib/schemas';
 
 const GlossWordInputSchema = z.object({
   word: z.string().describe('The Ancient Greek word to be glossed.'),
 });
 export type GlossWordInput = z.infer<typeof GlossWordInputSchema>;
-
-const GlossWordOutputSchema = z.object({
-  lemma: z.string().describe('The dictionary form (lemma) of the word.'),
-  partOfSpeech: z.string().describe('The part of speech of the word (e.g., Noun, Verb).'),
-  definition: z.string().describe('A concise English definition of the word.'),
-});
 export type GlossWordOutput = z.infer<typeof GlossWordOutputSchema>;
 
 export async function glossWord(input: GlossWordInput): Promise<GlossWordOutput> {
