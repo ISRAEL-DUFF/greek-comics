@@ -23,9 +23,11 @@ export default function Home() {
     fetchSavedStories();
   }, []);
 
-  const handleStoryGenerated = (result: StoryResult) => {
-    setStoryResult(result);
-    setCurrentStoryId(null); 
+  const handleStoryGenerated = (result: StoryResult | null) => {
+    if(result) {
+      setStoryResult(result);
+      setCurrentStoryId(null); 
+    }
   };
   
   const handleStorySaved = () => {
@@ -46,6 +48,9 @@ export default function Home() {
           // Simple sentence splitting for display.
           sentences: fullStory.story.match(/[^.!?]+[.!?]+/g) || [fullStory.story],
           illustrations: fullStory.illustrations,
+          level: fullStory.level,
+          topic: fullStory.topic,
+          grammar_scope: fullStory.grammar_scope
         },
       });
     } else {
@@ -57,7 +62,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
       <header className="no-print sticky top-0 z-10 border-b bg-background/80 py-4 backdrop-blur-sm">
         <div className="container mx-auto px-4 text-center">
           <h1 className="font-headline text-4xl font-bold text-primary">Ἑλληνικὰ Κόμιξ</h1>
@@ -73,7 +78,7 @@ export default function Home() {
                   setIsLoading={setIsLoading} 
                   isLoading={isLoading} 
                 />
-                <SavedStoriesList 
+                <SavedStoriesList
                   stories={savedStories} 
                   onSelectStory={handleSelectStory} 
                   currentStoryId={currentStoryId}

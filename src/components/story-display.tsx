@@ -111,7 +111,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
   return (
     <div className="space-y-8">
       <div className="no-print flex justify-end gap-2">
-         <ReactToPrint
+         {/* <ReactToPrint
           trigger={() => (
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
@@ -120,7 +120,11 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
           )}
           content={() => storyContentRef.current}
           documentTitle={story.substring(0, 30) || 'Ancient Greek Story'}
-        />
+        /> */}
+        <Button variant="outline" onClick={() => window.print()}>
+          <Download className="mr-2 h-4 w-4" />
+          Download PDF
+        </Button>
         {isSupabaseEnabled && (
           <Button onClick={handleSaveStory} disabled={isSaving || isLoading} className="bg-accent text-accent-foreground hover:bg-accent/90">
             {isSaving ? (

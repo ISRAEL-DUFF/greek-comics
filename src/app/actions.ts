@@ -5,24 +5,74 @@ import { generateGreekStory } from '@/ai/flows/generate-greek-story';
 import { generateStoryIllustration } from '@/ai/flows/generate-story-illustration';
 import { supabase } from '@/lib/supabase';
 
+// generateGif.js
+// import fs from 'fs';
+// import { createCanvas, loadImage } from 'canvas';
+// import GIFEncoder from 'gifencoder';
+
+// async function generateGifFromBase64(params: {
+//   base64Images: string[],
+//   outputPath: string,
+//   width: number,
+//   height: number
+//   delay?: number
+// }): Promise<void> {
+//   const {base64Images, outputPath, width, height, delay = 700} = params;
+//   const encoder = new GIFEncoder(width, height);
+//   const canvas = createCanvas(width, height);
+//   const ctx = canvas.getContext('2d');
+
+//   const stream = fs.createWriteStream(outputPath);
+//   encoder.createReadStream().pipe(stream);
+
+//   encoder.start();
+//   encoder.setRepeat(0); // loop forever
+//   encoder.setDelay(delay);
+//   encoder.setQuality(10);
+
+//   for (const base64 of base64Images) {
+//     const buffer = Buffer.from(base64, 'base64');
+//     const img = await loadImage(buffer);
+
+//     ctx.clearRect(0, 0, width, height);
+//     ctx.drawImage(img, 0, 0, width, height);
+//     encoder.addFrame(ctx);
+//   }
+
+//   encoder.finish();
+
+//   return new Promise((resolve) => {
+//     stream.on('finish', () => {
+//       console.log(`✅ GIF created at: ${outputPath}`);
+//       resolve();
+//     });
+//   });
+// }
+
 const STORY_TABLE = 'comic_stories';
 
 export type StoryData = {
+  topic: string;
   story: string;
   sentences: string[];
   illustrations: string[];
+  grammar_scope: string;
+  level: string;
 }
 
 // Type for the full story data, including illustrations
 export type SavedStory = {
   id: number;
   created_at: string;
+  topic: string;
+  level: string;
+  grammar_scope: string;
   story: string;
   illustrations: string[];
 }
 
 // Type for the list item, without illustrations for performance
-export type SavedStoryListItem = Omit<SavedStory, 'illustrations'>;
+export type SavedStoryListItem = Omit<Omit<SavedStory, 'illustrations'>, 'story'>;
 
 
 export type StoryResult = {
@@ -69,7 +119,7 @@ export async function generateStoryAction(
     // Join sentences for a full story string, but also pass the array.
     const story = sentences.join(' ');
 
-    return { data: { story, sentences, illustrations } };
+    return { data: { story, sentences, illustrations, topic: validatedFields.data.topic, level: validatedFields.data.level, grammar_scope: validatedFields.data.grammarScope } };
 
   } catch (error) {
     console.error("Error in generateStoryAction:", error);
@@ -92,7 +142,8 @@ export async function saveStoryAction(
     const { error } = await supabase
       .from(STORY_TABLE)
       .insert([
-        { story: storyData.story, illustrations: storyData.illustrations },
+        { story: storyData.story, illustrations: storyData.illustrations, topic: storyData.topic, 
+          grammar_scope: storyData.grammar_scope, level: storyData.level },
       ]);
 
     if (error) {
@@ -118,7 +169,7 @@ export async function getSavedStoriesAction(): Promise<SavedStoryListItem[]> {
     // Select only the necessary fields for the list view
     const { data, error } = await supabase
       .from(STORY_TABLE)
-      .select('id, created_at, story')
+      .select('id, created_at, topic, level, grammar_scope')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -151,6 +202,13 @@ export async function getStoryByIdAction(id: number): Promise<SavedStory | null>
       console.error(`Error fetching story with id ${id}:`, error);
       return null;
     }
+
+    // generateGifFromBase64({
+    //   base64Images: data.illustrations,
+    //   width: 512,
+    //   height: 512,
+    //   outputPath: './output.gif',
+    // });
 
     return data;
   } catch (error) {
