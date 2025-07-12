@@ -75,13 +75,20 @@ export async function generateStoryAction(
     
     const story = sentences.join(' ');
     
-    // Generate illustrations and glosses in parallel.
-    const [illustrationResults, glosses] = await Promise.all([
-      Promise.all(sentences.map(sentence => generateStoryIllustration({ sentence }))),
-      glossStory({ story })
-    ]);
-    
-    const illustrations = illustrationResults.map(res => res.illustrationDataUri);
+    // Generate glosses in parallel with the first illustration.
+    const glossesPromise = glossStory({ story });
+
+    // Generate illustrations sequentially to maintain character consistency.
+    const illustrations: string[] = [];
+    let previousIllustrationDataUri: string | undefined = undefined;
+
+    for (const sentence of sentences) {
+      const result = await generateStoryIllustration({ sentence, previousIllustrationDataUri });
+      illustrations.push(result.illustrationDataUri);
+      previousIllustrationDataUri = result.illustrationDataUri;
+    }
+
+    const glosses = await glossesPromise;
 
     return { data: { 
       story, 
