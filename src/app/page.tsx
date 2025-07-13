@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { StoryGeneratorForm } from '@/components/story-generator-form';
 import { StoryDisplay } from '@/components/story-display';
-import type { StoryResult, SavedStoryListItem } from '@/app/actions';
+import type { StoryResult, SavedStoryListItem, StoryData } from '@/app/actions';
 import { getSavedStoriesAction, getStoryByIdAction } from '@/app/actions';
 import { SavedStoriesList } from '@/components/saved-stories-list';
 
@@ -61,6 +61,21 @@ export default function Home() {
     }
     setIsLoadingSaved(false);
   };
+  
+  const handleImportedStory = (importedData: StoryData | null) => {
+    if (importedData) {
+      setStoryResult({ data: importedData });
+      setCurrentStoryId(null);
+    }
+    // This will be called after the import action is complete, successful or not.
+    setIsLoadingSaved(false);
+  };
+  
+  const handleImportStarted = () => {
+    setIsLoadingSaved(true);
+    setStoryResult(null);
+    setCurrentStoryId(null);
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
@@ -82,6 +97,8 @@ export default function Home() {
                 <SavedStoriesList
                   stories={savedStories} 
                   onSelectStory={handleSelectStory} 
+                  onStoryImported={handleImportedStory}
+                  onImportStarted={handleImportStarted}
                   currentStoryId={currentStoryId}
                 />
              </div>

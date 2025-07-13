@@ -4,7 +4,7 @@ import React, { useRef, useState } from 'react';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Save, Loader2, Download } from 'lucide-react';
+import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson } from 'lucide-react';
 import type { StoryResult } from '@/app/actions';
 import { WordGloss } from './word-gloss';
 import { cn } from '@/lib/utils';
@@ -37,7 +37,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
     if (result.success) {
       toast({
         title: 'Story Saved!',
-        description: 'Your story has been successfully saved.',
+        description: 'Your story has been successfully saved to the cloud.',
       });
       onStorySaved();
     } else {
@@ -47,6 +47,24 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
         description: result.error,
       });
     }
+  };
+
+  const handleExportJson = () => {
+    if (!storyResult?.data) return;
+
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(storyResult.data, null, 2)
+    )}`;
+    const link = document.createElement("a");
+    link.href = jsonString;
+    const topicSlug = storyResult.data.topic.toLowerCase().replace(/\s+/g, '-').slice(0, 20);
+    link.download = `hellenika-komiks-${topicSlug}.json`;
+
+    link.click();
+    toast({
+        title: 'Story Exported',
+        description: 'Your story has been downloaded as a JSON file.',
+    });
   };
 
   if (isLoading) {
@@ -109,7 +127,11 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
 
   return (
     <div className="space-y-8">
-      <div className="no-print flex justify-end gap-2">
+      <div className="no-print flex justify-end gap-2 flex-wrap">
+        <Button variant="outline" onClick={handleExportJson}>
+          <FileJson className="mr-2 h-4 w-4" />
+          Export JSON
+        </Button>
         <Button variant="outline" onClick={() => window.print()}>
           <Download className="mr-2 h-4 w-4" />
           Download PDF
