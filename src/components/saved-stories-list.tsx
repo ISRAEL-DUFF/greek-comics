@@ -14,13 +14,14 @@ import { cn } from "@/lib/utils";
 interface SavedStoriesListProps {
   stories: SavedStoryListItem[];
   onSelectStory: (story: SavedStoryListItem) => void;
-  onStoryImported: (storyData: StoryData) => void;
+  onStoryImported: (storyData: StoryData | null) => void;
+  onImportStarted: () => void;
   currentStoryId: number | null;
 }
 
 const isSupabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export function SavedStoriesList({ stories, onSelectStory, onStoryImported, currentStoryId }: SavedStoriesListProps) {
+export function SavedStoriesList({ stories, onSelectStory, onStoryImported, onImportStarted, currentStoryId }: SavedStoriesListProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -32,6 +33,8 @@ export function SavedStoriesList({ stories, onSelectStory, onStoryImported, curr
     const file = event.target.files?.[0];
     if (!file) return;
 
+    onImportStarted();
+
     const fileContent = await file.text();
     const result = await importStoryAction(fileContent);
 
@@ -41,6 +44,7 @@ export function SavedStoriesList({ stories, onSelectStory, onStoryImported, curr
         title: 'Import Failed',
         description: result.error,
       });
+      onStoryImported(null);
     } else if (result.data) {
       toast({
         title: 'Story Imported',

@@ -62,8 +62,18 @@ export default function Home() {
     setIsLoadingSaved(false);
   };
   
-  const handleImportedStory = (importedData: StoryData) => {
-    setStoryResult({ data: importedData });
+  const handleImportedStory = (importedData: StoryData | null) => {
+    if (importedData) {
+      setStoryResult({ data: importedData });
+      setCurrentStoryId(null);
+    }
+    // This will be called after the import action is complete, successful or not.
+    setIsLoadingSaved(false);
+  };
+  
+  const handleImportStarted = () => {
+    setIsLoadingSaved(true);
+    setStoryResult(null);
     setCurrentStoryId(null);
   };
 
@@ -88,6 +98,7 @@ export default function Home() {
                   stories={savedStories} 
                   onSelectStory={handleSelectStory} 
                   onStoryImported={handleImportedStory}
+                  onImportStarted={handleImportStarted}
                   currentStoryId={currentStoryId}
                 />
              </div>
