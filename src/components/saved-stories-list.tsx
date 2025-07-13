@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import type { SavedStoryListItem, StoryData } from "@/app/actions";
+import type { ImportResult, SavedStoryListItem, StoryData } from "@/app/actions";
 import { importStoryAction } from "@/app/actions";
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { BookMarked, Upload } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from "@/lib/utils";
+import { z } from 'zod';
+import { GlossStoryOutputSchema } from '@/lib/schemas';
 
 interface SavedStoriesListProps {
   stories: SavedStoryListItem[];
@@ -18,6 +20,16 @@ interface SavedStoriesListProps {
   onImportStarted: () => void;
   currentStoryId: number | null;
 }
+
+const StoryDataSchema = z.object({
+  topic: z.string(),
+  story: z.string(),
+  sentences: z.array(z.string()),
+  illustrations: z.array(z.string()),
+  grammar_scope: z.string(),
+  level: z.string(),
+  glosses: GlossStoryOutputSchema,
+});
 
 const isSupabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -29,6 +41,29 @@ export function SavedStoriesList({ stories, onSelectStory, onStoryImported, onIm
     fileInputRef.current?.click();
   };
 
+  async function importStoryFrontend(fileContent: string): Promise<ImportResult> {
+    try {
+      const json = JSON.parse(fileContent);
+      const validatedData = StoryDataSchema.safeParse(json);
+  
+      if (!validatedData.success) {
+        console.error("Zod validation error:", validatedData.error.flatten());
+        return { error: `Invalid JSON format. ${validatedData.error.flatten().formErrors.join(', ')}` };
+      }
+  
+      return { data: validatedData.data };
+
+      // return { data: json }
+  
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        return { error: "Invalid JSON file. Could not parse the file content." };
+      }
+      console.error("Error importing story:", error);
+      return { error: "An unexpected error occurred while importing the story." };
+    }
+  }
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -36,7 +71,8 @@ export function SavedStoriesList({ stories, onSelectStory, onStoryImported, onIm
     onImportStarted();
 
     const fileContent = await file.text();
-    const result = await importStoryAction(fileContent);
+    // const result = await importStoryAction(fileContent);
+    const result = await importStoryFrontend(fileContent);
 
     if (result.error) {
       toast({
