@@ -47,9 +47,11 @@ const generateStoryIllustrationFlow = ai.defineFlow(
     const prompt: any[] = [];
     if (previousIllustrationDataUri) {
         prompt.push({ media: { url: previousIllustrationDataUri } });
-        prompt.push({ text: `Generate an image that illustrates the following Ancient Greek sentence, maintaining the characters and style from the previous image: "${sentence}". The illustration should be in color and suitable for a children's story.` });
+        // prompt.push({ text: `Generate an image that illustrates the following Ancient Greek sentence, maintaining the characters and style from the previous image: "${sentence}". The illustration should be in color and suitable for a children's story.` });
+        prompt.push({ text: `Generate an image that illustrates the following Ancient Greek sentence, maintaining the characters and style from the previous image: "${sentence}". The illustration should be in color.` });
     } else {
-        prompt.push({ text: `Generate an image that illustrates the following Ancient Greek sentence: "${sentence}". The illustration should be in color and suitable for a children's story.` });
+      // prompt.push({ text: `Generate an image that illustrates the following Ancient Greek sentence: "${sentence}". The illustration should be in color and suitable for a children's story.` });
+      prompt.push({ text: `Generate an image that illustrates the following Ancient Greek sentence: "${sentence}". The illustration should be in color` });
     }
 
     const {media} = await ai.generate({
