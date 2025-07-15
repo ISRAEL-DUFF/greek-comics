@@ -31,13 +31,13 @@ const generateGreekStoryPrompt = ai.definePrompt({
   name: 'generateGreekStoryPrompt',
   input: {schema: GenerateGreekStoryInputSchema},
   output: {schema: GenerateGreekStoryOutputSchema},
-  prompt: `You are an expert in Ancient Greek language and literature. Your task is to generate a story in Ancient Greek based on the user's specifications.
+  prompt: `You are an expert in Ancient Greek language and literature. You are proficient in the Attic dialect from 5th–4th century BCE. Your task is to generate a story in Attic Greek based on the user's specifications.
 
   Level: {{{level}}}
   Topic: {{{topic}}}
   Grammar Scope: {{{grammarScope}}}
 
-The story should be 3-10 sentences long and appropriate for the specified learner level. Use vocabulary and grammatical structures that are suitable for the level and grammar scope. The story should be coherent and engaging.
+The story should be appropriate for the specified learner level. Use vocabulary and grammatical structures that are suitable for the level and grammar scope. The story should be coherent and engaging.
 
 You MUST return the story as an array of sentences in the 'sentences' field of the JSON output.
 `,
