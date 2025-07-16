@@ -67,8 +67,8 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
     )}`;
     const link = document.createElement("a");
     link.href = jsonString;
-    const topicSlug = storyResult.data.topic.toLowerCase().replace(/\s+/g, '-').slice(0, 20);
-    link.download = `hellenika-komiks-${topicSlug}.json`;
+    const topicSlug = storyResult.data.topic.toLowerCase().replace(/\s+/g, '-').slice(0, 50);
+    link.download = `${topicSlug}-hellenika-komiks.json`;
 
     link.click();
     toast({
