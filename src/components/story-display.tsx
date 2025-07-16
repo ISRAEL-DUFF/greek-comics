@@ -1,16 +1,26 @@
+
 'use client';
 
 import React, { useRef, useState } from 'react';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson } from 'lucide-react';
+import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson, Info } from 'lucide-react';
 import type { StoryResult } from '@/app/actions';
 import { WordGloss } from './word-gloss';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { saveStoryAction } from '@/app/actions';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+
 
 interface StoryDisplayProps {
   storyResult: StoryResult | null;
@@ -123,11 +133,42 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
     );
   }
 
-  const { sentences, illustrations, glosses } = storyResult.data;
+  const { sentences, illustrations, glosses, topic, level, grammar_scope } = storyResult.data;
 
   return (
     <div className="space-y-8">
       <div className="no-print flex justify-end gap-2 flex-wrap">
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline">
+                    <Info className="mr-2 h-4 w-4" />
+                    Story Info
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="font-headline text-2xl">Story Information</DialogTitle>
+                    <DialogDescription>
+                        Details about the generated story.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4 text-sm">
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <span className="font-semibold text-muted-foreground text-right">Topic</span>
+                        <span className="col-span-2">{topic}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <span className="font-semibold text-muted-foreground text-right">Level</span>
+                        <span className="col-span-2">{level}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <span className="font-semibold text-muted-foreground text-right">Grammar</span>
+                        <span className="col-span-2">{grammar_scope}</span>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+
         <Button variant="outline" onClick={handleExportJson}>
           <FileJson className="mr-2 h-4 w-4" />
           Export JSON
