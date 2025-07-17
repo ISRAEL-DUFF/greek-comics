@@ -50,6 +50,11 @@ export type SaveResult = {
   error?: string;
 };
 
+export type RegenerateResult = {
+  data?: GlossStoryOutput;
+  error?: string;
+};
+
 export async function generateStoryAction(
   formData: FormData
 ): Promise<StoryResult> {
@@ -213,38 +218,36 @@ export async function getWordGlossAction(word: string): Promise<GlossResult> {
   }
 }
 
-export type ImportResult = {
-  data?: StoryData;
-  error?: string;
-};
-
-const StoryDataSchema = z.object({
-  topic: z.string(),
-  story: z.string(),
-  sentences: z.array(z.string()),
-  illustrations: z.array(z.string()),
-  grammar_scope: z.string(),
-  level: z.string(),
-  glosses: GlossStoryOutputSchema,
-});
-
-export async function importStoryAction(fileContent: string): Promise<ImportResult> {
+export async function regenerateGlossesAction(
+  storyText: string,
+  storyId: number | null
+): Promise<RegenerateResult> {
   try {
-    const json = JSON.parse(fileContent);
-    const validatedData = StoryDataSchema.safeParse(json);
+    // 1. Generate the new glosses with morphology
+    const newGlosses = await glossStory({ story: storyText });
 
-    if (!validatedData.success) {
-      console.error("Zod validation error:", validatedData.error.flatten());
-      return { error: `Invalid JSON format. ${validatedData.error.flatten().formErrors.join(', ')}` };
+    // 2. If a storyId is provided and Supabase is configured, update the database
+    if (storyId && supabase) {
+      const { error: updateError } = await supabase
+        .from(STORY_TABLE)
+        .update({ glosses: newGlosses })
+        .eq('id', storyId);
+
+      if (updateError) {
+        console.error(`Error updating glosses for story ${storyId}:`, updateError);
+        // We can still return the glosses to the user even if DB update fails
+        return { 
+          data: newGlosses, 
+          error: `Failed to update story in database: ${updateError.message}` 
+        };
+      }
     }
 
-    return { data: validatedData.data };
+    // 3. Return the new glosses to the client
+    return { data: newGlosses };
 
   } catch (error) {
-    if (error instanceof SyntaxError) {
-      return { error: "Invalid JSON file. Could not parse the file content." };
-    }
-    console.error("Error importing story:", error);
-    return { error: "An unexpected error occurred while importing the story." };
+    console.error(`Error in regenerateGlossesAction:`, error);
+    return { error: 'An unexpected error occurred while regenerating glosses.' };
   }
 }

@@ -1,8 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import type { ImportResult, SavedStoryListItem, StoryData } from "@/app/actions";
-import { importStoryAction } from "@/app/actions";
+import type { StoryData, SavedStoryListItem } from "@/app/actions";
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,6 +30,12 @@ const StoryDataSchema = z.object({
   glosses: GlossStoryOutputSchema,
 });
 
+type ImportResult = {
+  data?: StoryData;
+  error?: string;
+};
+
+
 const isSupabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export function SavedStoriesList({ stories, onSelectStory, onStoryImported, onImportStarted, currentStoryId }: SavedStoriesListProps) {
@@ -52,8 +57,6 @@ export function SavedStoriesList({ stories, onSelectStory, onStoryImported, onIm
       }
   
       return { data: validatedData.data };
-
-      // return { data: json }
   
     } catch (error) {
       if (error instanceof SyntaxError) {
@@ -71,7 +74,6 @@ export function SavedStoriesList({ stories, onSelectStory, onStoryImported, onIm
     onImportStarted();
 
     const fileContent = await file.text();
-    // const result = await importStoryAction(fileContent);
     const result = await importStoryFrontend(fileContent);
 
     if (result.error) {

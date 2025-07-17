@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { StoryGeneratorForm } from '@/components/story-generator-form';
 import { StoryDisplay } from '@/components/story-display';
-import type { StoryResult, SavedStoryListItem, StoryData } from '@/app/actions';
+import type { StoryResult, SavedStoryListItem, StoryData, GlossStoryOutput } from '@/app/actions';
 import { getSavedStoriesAction, getStoryByIdAction } from '@/app/actions';
 import { SavedStoriesList } from '@/components/saved-stories-list';
 
@@ -62,6 +62,21 @@ export default function Home() {
     setIsLoadingSaved(false);
   };
   
+  const handleGlossesRegenerated = (newGlosses: GlossStoryOutput) => {
+    setStoryResult(prevResult => {
+      if (!prevResult || !prevResult.data) {
+        return prevResult;
+      }
+      return {
+        ...prevResult,
+        data: {
+          ...prevResult.data,
+          glosses: newGlosses,
+        },
+      };
+    });
+  };
+  
   const handleImportedStory = (importedData: StoryData | null) => {
     if (importedData) {
       setStoryResult({ data: importedData });
@@ -108,6 +123,8 @@ export default function Home() {
               storyResult={storyResult} 
               isLoading={isLoading || isLoadingSaved} 
               onStorySaved={handleStorySaved} 
+              currentStoryId={currentStoryId}
+              onGlossesRegenerated={handleGlossesRegenerated}
             />
           </div>
         </div>
