@@ -10,6 +10,7 @@ export const GlossWordOutputSchema = z.object({
   lemma: z.string().describe('The dictionary form (lemma) of the word.'),
   partOfSpeech: z.string().describe('The part of speech of the word (e.g., Noun, Verb).'),
   definition: z.string().describe('A concise English definition of the word.'),
+  morphology: z.string().optional().describe('A concise morphological analysis (e.g., "Noun, Nom, Sg, Masc").'),
 });
 
 export const GlossStoryOutputSchema = z.record(z.string(), GlossWordOutputSchema)

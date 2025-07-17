@@ -34,9 +34,11 @@ const glossStoryPrompt = ai.definePrompt({
   name: 'glossStoryPrompt',
   input: {schema: GlossStoryInputSchema},
   output: {schema: GlossStoryInternalOutputSchema},
-  prompt: `You are an expert Ancient Greek lexicographer. For the given story, identify all unique words. For each unique word, provide its dictionary form (lemma), its part of speech, and a concise English definition.
+  prompt: `You are an expert Ancient Greek lexicographer. For the given story, identify all unique words. For each unique word, provide its dictionary form (lemma), its part of speech, a concise English definition, and a morphological analysis.
   
-  The output should be a JSON object containing a 'glosses' field, which is an array of objects. Each object in the array should have a 'word' and a 'gloss' containing its lemma, partOfSpeech, and definition.
+  The morphological analysis should be concise (e.g., "Noun, Nom, Sg, Masc" or "Verb, Pres, Act, Ind, 3rd, Sg").
+
+  The output should be a JSON object containing a 'glosses' field, which is an array of objects. Each object in the array should have a 'word' and a 'gloss' containing its lemma, partOfSpeech, definition, and morphology.
   
   Story:
   {{{story}}}

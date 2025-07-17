@@ -5,7 +5,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import type { GlossStoryOutput } from '@/ai/flows/gloss-story-flow';
+import type { GlossStoryOutput } from '@/app/actions';
+import { Badge } from './ui/badge';
 
 interface WordGlossProps {
   word: string;
@@ -17,10 +18,16 @@ export function WordGloss({ word, glosses }: WordGlossProps) {
     return null;
   }
   
+  // This regex handles leading/trailing punctuation, including Greek-specific ones.
   const match = word.match(/^([.,·;]?)(.*?)([.,·;]?)$/);
   const leadingPunct = match?.[1] || '';
   const mainWord = match?.[2] || word;
   const trailingPunct = match?.[3] || '';
+
+  // If the "word" is only punctuation, just render it.
+  if (!mainWord) {
+    return <>{word}{' '}</>;
+  }
 
   const normalizedWord = mainWord.toLowerCase();
   const glossData = glosses[normalizedWord];
@@ -38,11 +45,14 @@ export function WordGloss({ word, glosses }: WordGlossProps) {
             {mainWord}
           </span>
         </PopoverTrigger>
-        <PopoverContent className="w-auto max-w-xs p-3 text-sm" side="top" align="center">
-          <div className="space-y-1">
-            <p className="font-bold">{glossData.lemma}</p>
+        <PopoverContent className="w-auto max-w-sm p-3 text-sm" side="top" align="center">
+          <div className="space-y-1.5">
+            <p className="font-bold text-base">{glossData.lemma}</p>
             <p className="text-xs italic text-muted-foreground">{glossData.partOfSpeech}</p>
-            <p>{glossData.definition}</p>
+            {glossData.morphology && (
+              <Badge variant="outline" className="text-xs font-mono">{glossData.morphology}</Badge>
+            )}
+            <p className="pt-1">{glossData.definition}</p>
           </div>
         </PopoverContent>
       </Popover>

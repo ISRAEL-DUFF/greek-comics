@@ -212,39 +212,3 @@ export async function getWordGlossAction(word: string): Promise<GlossResult> {
     return { error: 'Could not retrieve definition.' };
   }
 }
-
-export type ImportResult = {
-  data?: StoryData;
-  error?: string;
-};
-
-const StoryDataSchema = z.object({
-  topic: z.string(),
-  story: z.string(),
-  sentences: z.array(z.string()),
-  illustrations: z.array(z.string()),
-  grammar_scope: z.string(),
-  level: z.string(),
-  glosses: GlossStoryOutputSchema,
-});
-
-export async function importStoryAction(fileContent: string): Promise<ImportResult> {
-  try {
-    const json = JSON.parse(fileContent);
-    const validatedData = StoryDataSchema.safeParse(json);
-
-    if (!validatedData.success) {
-      console.error("Zod validation error:", validatedData.error.flatten());
-      return { error: `Invalid JSON format. ${validatedData.error.flatten().formErrors.join(', ')}` };
-    }
-
-    return { data: validatedData.data };
-
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      return { error: "Invalid JSON file. Could not parse the file content." };
-    }
-    console.error("Error importing story:", error);
-    return { error: "An unexpected error occurred while importing the story." };
-  }
-}

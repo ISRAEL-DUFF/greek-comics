@@ -26,10 +26,11 @@ const glossWordPrompt = ai.definePrompt({
   name: 'glossWordPrompt',
   input: {schema: GlossWordInputSchema},
   output: {schema: GlossWordOutputSchema},
-  prompt: `You are an expert Ancient Greek lexicographer. For the given word "{{word}}", provide its dictionary form (lemma), its part of speech, and a concise English definition.
+  prompt: `You are an expert Ancient Greek lexicographer. For the given word "{{word}}", provide its dictionary form (lemma), its part of speech, a concise English definition, and a morphological analysis.
   
   If the word is a verb, provide the principal parts as the lemma. If it's a noun or adjective, provide the nominative singular form.
-  
+  The morphological analysis should be concise (e.g., "Noun, Nom, Sg, Masc" or "Verb, Pres, Act, Ind, 3rd, Sg").
+
   Your response must be in JSON format.`,
 });
 
