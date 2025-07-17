@@ -218,31 +218,36 @@ export async function getWordGlossAction(word: string): Promise<GlossResult> {
   }
 }
 
-export async function regenerateGlossesAction(storyId: number, storyText: string): Promise<RegenerateResult> {
-  if (!supabase) {
-    return { error: 'Supabase is not configured. Cannot update story.' };
-  }
-
+export async function regenerateGlossesAction(
+  storyText: string,
+  storyId: number | null
+): Promise<RegenerateResult> {
   try {
     // 1. Generate the new glosses with morphology
     const newGlosses = await glossStory({ story: storyText });
 
-    // 2. Update the story in the database
-    const { error: updateError } = await supabase
-      .from(STORY_TABLE)
-      .update({ glosses: newGlosses })
-      .eq('id', storyId);
+    // 2. If a storyId is provided and Supabase is configured, update the database
+    if (storyId && supabase) {
+      const { error: updateError } = await supabase
+        .from(STORY_TABLE)
+        .update({ glosses: newGlosses })
+        .eq('id', storyId);
 
-    if (updateError) {
-      console.error(`Error updating glosses for story ${storyId}:`, updateError);
-      return { error: `Failed to update story in database: ${updateError.message}` };
+      if (updateError) {
+        console.error(`Error updating glosses for story ${storyId}:`, updateError);
+        // We can still return the glosses to the user even if DB update fails
+        return { 
+          data: newGlosses, 
+          error: `Failed to update story in database: ${updateError.message}` 
+        };
+      }
     }
 
     // 3. Return the new glosses to the client
     return { data: newGlosses };
 
   } catch (error) {
-    console.error(`Error in regenerateGlossesAction for story ${storyId}:`, error);
+    console.error(`Error in regenerateGlossesAction:`, error);
     return { error: 'An unexpected error occurred while regenerating glosses.' };
   }
 }

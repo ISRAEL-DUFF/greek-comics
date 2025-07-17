@@ -50,17 +50,18 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
   }, [storyResult]);
 
   const handleRegenerateGlosses = async () => {
-    if (!currentStoryId || !storyResult?.data?.story) {
+    if (!storyResult?.data?.story) {
         toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'Cannot regenerate glosses without a saved story context.',
+            description: 'Cannot regenerate glosses without story text.',
         });
         return;
     }
 
     setIsRegenerating(true);
-    const result = await regenerateGlossesAction(currentStoryId, storyResult.data.story);
+    // Pass the story text and the ID (which can be null) to the action.
+    const result = await regenerateGlossesAction(storyResult.data.story, currentStoryId);
     setIsRegenerating(false);
 
     if (result.data) {
@@ -179,7 +180,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
 
   return (
     <div className="space-y-8">
-       {isSupabaseEnabled && currentStoryId && needsMorphologyUpdate && (
+       {needsMorphologyUpdate && (
         <Card className="p-4 bg-blue-50 border-blue-200">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="flex-shrink-0">
