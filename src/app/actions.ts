@@ -50,6 +50,11 @@ export type SaveResult = {
   error?: string;
 };
 
+export type RegenerateResult = {
+  data?: GlossStoryOutput;
+  error?: string;
+};
+
 export async function generateStoryAction(
   formData: FormData
 ): Promise<StoryResult> {
@@ -210,5 +215,34 @@ export async function getWordGlossAction(word: string): Promise<GlossResult> {
   } catch (error) {
     console.error(`Error glossing word "${word}":`, error);
     return { error: 'Could not retrieve definition.' };
+  }
+}
+
+export async function regenerateGlossesAction(storyId: number, storyText: string): Promise<RegenerateResult> {
+  if (!supabase) {
+    return { error: 'Supabase is not configured. Cannot update story.' };
+  }
+
+  try {
+    // 1. Generate the new glosses with morphology
+    const newGlosses = await glossStory({ story: storyText });
+
+    // 2. Update the story in the database
+    const { error: updateError } = await supabase
+      .from(STORY_TABLE)
+      .update({ glosses: newGlosses })
+      .eq('id', storyId);
+
+    if (updateError) {
+      console.error(`Error updating glosses for story ${storyId}:`, updateError);
+      return { error: `Failed to update story in database: ${updateError.message}` };
+    }
+
+    // 3. Return the new glosses to the client
+    return { data: newGlosses };
+
+  } catch (error) {
+    console.error(`Error in regenerateGlossesAction for story ${storyId}:`, error);
+    return { error: 'An unexpected error occurred while regenerating glosses.' };
   }
 }

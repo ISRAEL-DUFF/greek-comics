@@ -1,17 +1,17 @@
 
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson, Info } from 'lucide-react';
-import type { StoryResult } from '@/app/actions';
+import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson, Info, RefreshCcw } from 'lucide-react';
+import type { StoryResult, GlossStoryOutput } from '@/app/actions';
 import { WordGloss } from './word-gloss';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { saveStoryAction } from '@/app/actions';
+import { saveStoryAction, regenerateGlossesAction } from '@/app/actions';
 import {
   Dialog,
   DialogContent,
@@ -26,16 +26,58 @@ interface StoryDisplayProps {
   storyResult: StoryResult | null;
   isLoading: boolean;
   onStorySaved: () => void;
+  currentStoryId: number | null;
+  onGlossesRegenerated: (newGlosses: GlossStoryOutput) => void;
 }
 
 // Supabase is checked in the action, but we can disable the button here too
 const isSupabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 
-export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisplayProps) {
+export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStoryId, onGlossesRegenerated }: StoryDisplayProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const { toast } = useToast();
   const storyContentRef = useRef<HTMLDivElement>(null);
+
+  const needsMorphologyUpdate = useMemo(() => {
+    if (!storyResult?.data?.glosses || Object.keys(storyResult.data.glosses).length === 0) {
+      return false;
+    }
+    // Check the first gloss entry for the morphology field.
+    const firstGloss = Object.values(storyResult.data.glosses)[0];
+    return firstGloss && typeof firstGloss.morphology === 'undefined';
+  }, [storyResult]);
+
+  const handleRegenerateGlosses = async () => {
+    if (!currentStoryId || !storyResult?.data?.story) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Cannot regenerate glosses without a saved story context.',
+        });
+        return;
+    }
+
+    setIsRegenerating(true);
+    const result = await regenerateGlossesAction(currentStoryId, storyResult.data.story);
+    setIsRegenerating(false);
+
+    if (result.data) {
+        toast({
+            title: 'Glosses Updated',
+            description: 'Morphological data has been added to your story.',
+        });
+        onGlossesRegenerated(result.data);
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: result.error || 'An unknown error occurred.',
+        });
+    }
+  };
+
 
   const handleSaveStory = async () => {
     if (!storyResult?.data) return;
@@ -137,6 +179,31 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
 
   return (
     <div className="space-y-8">
+       {isSupabaseEnabled && currentStoryId && needsMorphologyUpdate && (
+        <Card className="p-4 bg-blue-50 border-blue-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex-shrink-0">
+                    <Info className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="flex-grow">
+                    <h4 className="font-semibold text-blue-800">Update Available</h4>
+                    <p className="text-sm text-blue-700">
+                        This story is missing the new morphological data. Update it to get the latest grammatical insights.
+                    </p>
+                </div>
+                <Button 
+                    size="sm" 
+                    onClick={handleRegenerateGlosses} 
+                    disabled={isRegenerating}
+                    className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+                >
+                    {isRegenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
+                    {isRegenerating ? 'Updating...' : 'Update Glosses'}
+                </Button>
+            </div>
+        </Card>
+      )}
+
       <div className="no-print flex justify-end gap-2 flex-wrap">
         <Dialog>
             <DialogTrigger asChild>
@@ -178,7 +245,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved }: StoryDisp
           Download PDF
         </Button>
         {isSupabaseEnabled && (
-          <Button onClick={handleSaveStory} disabled={isSaving || isLoading} className="bg-accent text-accent-foreground hover:bg-accent/90">
+          <Button onClick={handleSaveStory} disabled={isSaving || isLoading || !!currentStoryId} className="bg-accent text-accent-foreground hover:bg-accent/90">
             {isSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
