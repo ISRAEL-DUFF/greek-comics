@@ -13,10 +13,15 @@ const STORY_TABLE = 'comic_stories';
 export type GlossWordOutput = z.infer<typeof GlossWordOutputSchema>;
 export type GlossStoryOutput = z.infer<typeof GlossStoryOutputSchema>;
 
+export type Sentence = {
+  sentence: string;
+  syntaxNotes: string;
+};
+
 export type StoryData = {
   topic: string;
   story: string;
-  sentences: string[];
+  sentences: Sentence[];
   illustrations: string[];
   grammar_scope: string;
   level: string;
@@ -31,6 +36,7 @@ export type SavedStory = {
   level: string;
   grammar_scope: string;
   story: string;
+  sentences: Sentence[]; // Changed from string[]
   illustrations: string[];
   glosses: GlossStoryOutput;
 }
@@ -78,7 +84,7 @@ export async function generateStoryAction(
       return { error: 'Generated story was empty or could not be split into sentences.' };
     }
     
-    const story = sentences.join(' ');
+    const story = sentences.map(s => s.sentence).join(' ');
     
     // Generate glosses in parallel with the first illustration.
     const glossesPromise = glossStory({ story });
@@ -87,8 +93,8 @@ export async function generateStoryAction(
     const illustrations: string[] = [];
     let previousIllustrationDataUri: string | undefined = undefined;
 
-    for (const sentence of sentences) {
-      const result = await generateStoryIllustration({ sentence, previousIllustrationDataUri });
+    for (const sentenceObj of sentences) {
+      const result = await generateStoryIllustration({ sentence: sentenceObj.sentence, previousIllustrationDataUri });
       illustrations.push(result.illustrationDataUri);
       previousIllustrationDataUri = result.illustrationDataUri;
     }
@@ -127,7 +133,8 @@ export async function saveStoryAction(
       .from(STORY_TABLE)
       .insert([
         { 
-          story: storyData.story, 
+          story: storyData.story,
+          sentences: storyData.sentences, 
           illustrations: storyData.illustrations, 
           topic: storyData.topic, 
           grammar_scope: storyData.grammar_scope, 

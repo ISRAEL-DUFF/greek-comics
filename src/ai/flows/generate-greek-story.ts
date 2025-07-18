@@ -19,7 +19,10 @@ const GenerateGreekStoryInputSchema = z.object({
 export type GenerateGreekStoryInput = z.infer<typeof GenerateGreekStoryInputSchema>;
 
 const GenerateGreekStoryOutputSchema = z.object({
-  sentences: z.array(z.string()).describe('The generated Ancient Greek story, as an array of sentences.'),
+  sentences: z.array(z.object({
+    sentence: z.string().describe('A single sentence in Ancient Greek.'),
+    syntaxNotes: z.string().describe('Concise syntax notes explaining the grammatical structure of the sentence.'),
+  })).describe('The generated Ancient Greek story, as an array of sentence objects.'),
 });
 export type GenerateGreekStoryOutput = z.infer<typeof GenerateGreekStoryOutputSchema>;
 
@@ -39,7 +42,9 @@ const generateGreekStoryPrompt = ai.definePrompt({
 
 The story should be appropriate for the specified learner level. Use vocabulary and grammatical structures that are suitable for the level and grammar scope. The story should be coherent and engaging.
 
-You MUST return the story as an array of sentences in the 'sentences' field of the JSON output.
+For each sentence you generate, you MUST also provide concise syntax notes that explain the grammatical structure, such as identifying clauses, verb tenses, cases of nouns, etc.
+
+You MUST return the story as an array of objects in the 'sentences' field of the JSON output. Each object must contain a 'sentence' field and a 'syntaxNotes' field.
 `,
 });
 

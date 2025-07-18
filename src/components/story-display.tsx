@@ -3,9 +3,9 @@
 
 import React, { useRef, useState, useMemo } from 'react';
 import Image from 'next/image';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson, Info, RefreshCcw } from 'lucide-react';
+import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson, Info, RefreshCcw, MessageSquareQuote } from 'lucide-react';
 import type { StoryResult, GlossStoryOutput } from '@/app/actions';
 import { WordGloss } from './word-gloss';
 import { cn } from '@/lib/utils';
@@ -257,45 +257,62 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
         )}
       </div>
       <div ref={storyContentRef} className="print-container space-y-16">
-        {sentences.map((sentence, index) => {
+        {sentences.map((sentenceObj, index) => {
           const illustration = illustrations?.[index];
           const isImageRight = index % 2 === 0;
 
           return (
             <div
               key={index}
-              className="story-item flex flex-col md:flex-row gap-8 items-center"
+              className="story-item flex flex-col gap-8"
             >
-              {illustration && (
+              <div className="flex flex-col md:flex-row gap-8 items-center">
+                {illustration && (
+                  <div
+                    className={cn(
+                      'w-full md:w-1/2',
+                      isImageRight ? 'md:order-2' : 'md:order-1'
+                    )}
+                  >
+                    <Image
+                      src={illustration}
+                      alt={`Illustration for: ${sentenceObj.sentence}`}
+                      width={600}
+                      height={600}
+                      className="rounded-lg object-cover shadow-lg aspect-square mx-auto"
+                      data-ai-hint="ancient greece story"
+                      unoptimized
+                    />
+                  </div>
+                )}
                 <div
                   className={cn(
                     'w-full md:w-1/2',
-                    isImageRight ? 'md:order-2' : 'md:order-1'
+                    isImageRight ? 'md:order-1' : 'md:order-2'
                   )}
                 >
-                  <Image
-                    src={illustration}
-                    alt={`Illustration for: ${sentence}`}
-                    width={600}
-                    height={600}
-                    className="rounded-lg object-cover shadow-lg aspect-square mx-auto"
-                    data-ai-hint="ancient greece story"
-                    unoptimized
-                  />
+                  <p className="text-xl lg:text-2xl leading-relaxed lg:leading-loose lang-grc font-body">
+                    {sentenceObj.sentence.split(' ').map((word, i) => (
+                      <WordGloss key={i} word={word} glosses={glosses} />
+                    ))}
+                  </p>
                 </div>
-              )}
-              <div
-                className={cn(
-                  'w-full md:w-1/2',
-                  isImageRight ? 'md:order-1' : 'md:order-2'
-                )}
-              >
-                <p className="text-xl lg:text-2xl leading-relaxed lg:leading-loose lang-grc font-body">
-                  {sentence.split(' ').map((word, i) => (
-                    <WordGloss key={i} word={word} glosses={glosses} />
-                  ))}
-                </p>
               </div>
+
+              {sentenceObj.syntaxNotes && sentenceObj.syntaxNotes !== 'N/A' && (
+                <Card className="bg-muted/50 border-muted/80">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <MessageSquareQuote className="h-5 w-5 flex-shrink-0 text-muted-foreground mt-0.5" />
+                      <div>
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-1">Syntax Notes</h4>
+                        <p className="text-sm text-foreground/80">{sentenceObj.syntaxNotes}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
             </div>
           );
         })}

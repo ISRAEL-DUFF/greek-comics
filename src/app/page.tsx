@@ -42,11 +42,15 @@ export default function Home() {
     const fullStory = await getStoryByIdAction(storyListItem.id);
     
     if (fullStory) {
+      // Backwards compatibility for old stories that don't have the new `sentences` array of objects
+      const sentences = fullStory.sentences && typeof fullStory.sentences[0] === 'object'
+        ? fullStory.sentences
+        : (fullStory.story.match(/[^.!?]+[.!?]+/g) || [fullStory.story]).map(s => ({ sentence: s, syntaxNotes: 'N/A' }));
+
       setStoryResult({
         data: {
           story: fullStory.story,
-          // Simple sentence splitting for display.
-          sentences: fullStory.story.match(/[^.!?]+[.!?]+/g) || [fullStory.story],
+          sentences: sentences,
           illustrations: fullStory.illustrations,
           level: fullStory.level,
           topic: fullStory.topic,
