@@ -23,7 +23,13 @@ interface SavedStoriesListProps {
 const StoryDataSchema = z.object({
   topic: z.string(),
   story: z.string(),
-  sentences: z.array(z.string()),
+  sentences: z.array(z.object({
+    sentence: z.string(),
+    words: z.array(z.object({
+        word: z.string(),
+        syntaxNote: z.string().optional().default('N/A'),
+    }))
+  })),
   illustrations: z.array(z.string()),
   grammar_scope: z.string(),
   level: z.string(),

@@ -3,9 +3,28 @@
 import { useState, useEffect } from 'react';
 import { StoryGeneratorForm } from '@/components/story-generator-form';
 import { StoryDisplay } from '@/components/story-display';
-import type { StoryResult, SavedStoryListItem, StoryData, GlossStoryOutput } from '@/app/actions';
+import type { StoryResult, SavedStoryListItem, StoryData, GlossStoryOutput, Sentence } from '@/app/actions';
 import { getSavedStoriesAction, getStoryByIdAction } from '@/app/actions';
 import { SavedStoriesList } from '@/components/saved-stories-list';
+
+/**
+ * Creates a modern `Sentence[]` array from a simple story string.
+ * This is a backward-compatibility helper for older saved stories.
+ * @param storyText The full story as a single string.
+ * @returns An array of Sentence objects.
+ */
+function createSentencesFromStory(storyText: string): Sentence[] {
+    // Split the story into sentences using punctuation as delimiters.
+    const sentenceStrings = storyText.match(/[^.!?]+[.!?]+/g) || [storyText];
+    
+    return sentenceStrings.map(s => {
+      const trimmedSentence = s.trim();
+      // Split the sentence into words and create the word objects.
+      const words = trimmedSentence.split(/\s+/).map(w => ({ word: w, syntaxNote: 'N/A' }));
+      return { sentence: trimmedSentence, words };
+    });
+}
+
 
 export default function Home() {
   const [storyResult, setStoryResult] = useState<StoryResult | null>(null);
@@ -42,11 +61,17 @@ export default function Home() {
     const fullStory = await getStoryByIdAction(storyListItem.id);
     
     if (fullStory) {
+      // BACKWARD COMPATIBILITY CHECK:
+      // Check if the loaded story has the new `sentences.words` array of objects.
+      // If not, it's an old story format, and we need to convert it.
+      const sentences = (fullStory.sentences && fullStory.sentences.length > 0 && fullStory.sentences[0].words)
+        ? fullStory.sentences
+        : createSentencesFromStory(fullStory.story);
+
       setStoryResult({
         data: {
           story: fullStory.story,
-          // Simple sentence splitting for display.
-          sentences: fullStory.story.match(/[^.!?]+[.!?]+/g) || [fullStory.story],
+          sentences: sentences,
           illustrations: fullStory.illustrations,
           level: fullStory.level,
           topic: fullStory.topic,
