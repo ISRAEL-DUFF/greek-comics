@@ -11,10 +11,18 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { GlossWordOutputSchema, GlossStoryOutputSchema } from '@/lib/schemas';
+import type { Sentence } from '@/app/actions';
 
 const GlossStoryInputSchema = z.object({
-  story: z.string().describe('The Ancient Greek story to be glossed.'),
+  sentences: z.array(z.object({
+    sentence: z.string(),
+    words: z.array(z.object({
+      word: z.string(),
+      syntaxNote: z.string(),
+    })),
+  })).describe('The structured story with sentences and words.'),
 });
+
 export type GlossStoryInput = z.infer<typeof GlossStoryInputSchema>;
 export type GlossStoryOutput = z.infer<typeof GlossStoryOutputSchema>;
 
@@ -32,15 +40,15 @@ export async function glossStory(input: GlossStoryInput): Promise<GlossStoryOutp
 
 const glossStoryPrompt = ai.definePrompt({
   name: 'glossStoryPrompt',
-  input: {schema: GlossStoryInputSchema},
+  input: {schema: z.object({ story: z.string().describe('A space-separated list of unique words from the story.') })},
   output: {schema: GlossStoryInternalOutputSchema},
-  prompt: `You are an expert Ancient Greek lexicographer. For the given story, identify all unique words. For each unique word, provide its dictionary form (lemma), its part of speech, a concise English definition, and a morphological analysis.
+  prompt: `You are an expert Ancient Greek lexicographer. For the given list of unique words, provide a gloss for each. Each gloss must contain its dictionary form (lemma), its part of speech, a concise English definition, and a morphological analysis.
   
   The morphological analysis should be concise (e.g., "Noun, Nom, Sg, Masc" or "Verb, Pres, Act, Ind, 3rd, Sg").
 
   The output should be a JSON object containing a 'glosses' field, which is an array of objects. Each object in the array should have a 'word' and a 'gloss' containing its lemma, partOfSpeech, definition, and morphology.
   
-  Story:
+  Unique Words:
   {{{story}}}
   `,
 });
@@ -52,13 +60,12 @@ const glossStoryFlow = ai.defineFlow(
     outputSchema: GlossStoryOutputSchema,
   },
   async input => {
-    // Sanitize the story to get a clean word list.
+    // Extract all words from the structured sentences, then get unique words.
+    const allWords = input.sentences.flatMap(s => s.words.map(w => w.word));
     const uniqueWords = Array.from(
       new Set(
-        input.story
-          .toLowerCase()
-          .replace(/[.,·;]/g, '')
-          .split(/\s+/)
+        allWords
+          .map(word => word.toLowerCase().replace(/[.,·;]/g, ''))
           .filter(Boolean)
       )
     );
@@ -73,6 +80,7 @@ const glossStoryFlow = ai.defineFlow(
     // Transform the array of glosses back into the map format the application expects.
     const glossMap: GlossStoryOutput = {};
     for (const item of output.glosses) {
+        // The AI might return the gloss for the normalized word, so we key it by that.
         glossMap[item.word.toLowerCase()] = item.gloss;
     }
 

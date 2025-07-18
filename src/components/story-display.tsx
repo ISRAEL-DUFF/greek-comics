@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useRef, useState, useMemo } from 'react';
@@ -6,7 +5,7 @@ import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson, Info, RefreshCcw, MessageSquareQuote } from 'lucide-react';
-import type { StoryResult, GlossStoryOutput } from '@/app/actions';
+import type { StoryResult, GlossStoryOutput, Sentence, Word } from '@/app/actions';
 import { WordGloss } from './word-gloss';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -50,18 +49,18 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
   }, [storyResult]);
 
   const handleRegenerateGlosses = async () => {
-    if (!storyResult?.data?.story) {
+    if (!storyResult?.data?.sentences) {
         toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'Cannot regenerate glosses without story text.',
+            description: 'Cannot regenerate glosses without story data.',
         });
         return;
     }
 
     setIsRegenerating(true);
-    // Pass the story text and the ID (which can be null) to the action.
-    const result = await regenerateGlossesAction(storyResult.data.story, currentStoryId);
+    // Pass the sentences and the ID (which can be null) to the action.
+    const result = await regenerateGlossesAction(storyResult.data.sentences, currentStoryId);
     setIsRegenerating(false);
 
     if (result.data) {
@@ -292,27 +291,12 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
                   )}
                 >
                   <p className="text-xl lg:text-2xl leading-relaxed lg:leading-loose lang-grc font-body">
-                    {sentenceObj.sentence.split(' ').map((word, i) => (
-                      <WordGloss key={i} word={word} glosses={glosses} />
+                    {sentenceObj.words.map((wordObj, i) => (
+                      <WordGloss key={i} wordObj={wordObj} glosses={glosses} />
                     ))}
                   </p>
                 </div>
               </div>
-
-              {sentenceObj.syntaxNotes && sentenceObj.syntaxNotes !== 'N/A' && (
-                <Card className="bg-muted/50 border-muted/80">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <MessageSquareQuote className="h-5 w-5 flex-shrink-0 text-muted-foreground mt-0.5" />
-                      <div>
-                        <h4 className="font-semibold text-sm text-muted-foreground mb-1">Syntax Notes</h4>
-                        <p className="text-sm text-foreground/80">{sentenceObj.syntaxNotes}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
             </div>
           );
         })}

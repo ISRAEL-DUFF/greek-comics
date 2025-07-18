@@ -13,9 +13,14 @@ const STORY_TABLE = 'comic_stories';
 export type GlossWordOutput = z.infer<typeof GlossWordOutputSchema>;
 export type GlossStoryOutput = z.infer<typeof GlossStoryOutputSchema>;
 
+export type Word = {
+  word: string;
+  syntaxNote: string;
+};
+
 export type Sentence = {
   sentence: string;
-  syntaxNotes: string;
+  words: Word[];
 };
 
 export type StoryData = {
@@ -36,7 +41,7 @@ export type SavedStory = {
   level: string;
   grammar_scope: string;
   story: string;
-  sentences: Sentence[]; // Changed from string[]
+  sentences: Sentence[];
   illustrations: string[];
   glosses: GlossStoryOutput;
 }
@@ -87,7 +92,7 @@ export async function generateStoryAction(
     const story = sentences.map(s => s.sentence).join(' ');
     
     // Generate glosses in parallel with the first illustration.
-    const glossesPromise = glossStory({ story });
+    const glossesPromise = glossStory({ sentences });
 
     // Generate illustrations sequentially to maintain character consistency.
     const illustrations: string[] = [];
@@ -226,12 +231,12 @@ export async function getWordGlossAction(word: string): Promise<GlossResult> {
 }
 
 export async function regenerateGlossesAction(
-  storyText: string,
+  sentences: Sentence[],
   storyId: number | null
 ): Promise<RegenerateResult> {
   try {
     // 1. Generate the new glosses with morphology
-    const newGlosses = await glossStory({ story: storyText });
+    const newGlosses = await glossStory({ sentences });
 
     // 2. If a storyId is provided and Supabase is configured, update the database
     if (storyId && supabase) {

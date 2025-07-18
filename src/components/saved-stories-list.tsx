@@ -25,7 +25,10 @@ const StoryDataSchema = z.object({
   story: z.string(),
   sentences: z.array(z.object({
     sentence: z.string(),
-    syntaxNotes: z.string().optional().default('N/A'),
+    words: z.array(z.object({
+        word: z.string(),
+        syntaxNote: z.string().optional().default('N/A'),
+    }))
   })),
   illustrations: z.array(z.string()),
   grammar_scope: z.string(),

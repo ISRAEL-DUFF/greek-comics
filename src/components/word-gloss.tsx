@@ -5,26 +5,28 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import type { GlossStoryOutput } from '@/app/actions';
+import type { GlossStoryOutput, Word } from '@/app/actions';
 import { Badge } from './ui/badge';
+import { Separator } from './ui/separator';
+import { MessageSquareQuote } from 'lucide-react';
 
 interface WordGlossProps {
-  word: string;
+  wordObj: Word;
   glosses: GlossStoryOutput;
 }
 
-export function WordGloss({ word, glosses }: WordGlossProps) {
+export function WordGloss({ wordObj, glosses }: WordGlossProps) {
+  const { word, syntaxNote } = wordObj;
+  
   if (!word) {
     return null;
   }
   
-  // This regex handles leading/trailing punctuation, including Greek-specific ones.
   const match = word.match(/^([.,·;]?)(.*?)([.,·;]?)$/);
   const leadingPunct = match?.[1] || '';
   const mainWord = match?.[2] || word;
   const trailingPunct = match?.[3] || '';
 
-  // If the "word" is only punctuation, just render it.
   if (!mainWord) {
     return <>{word}{' '}</>;
   }
@@ -46,13 +48,23 @@ export function WordGloss({ word, glosses }: WordGlossProps) {
           </span>
         </PopoverTrigger>
         <PopoverContent className="w-auto max-w-sm p-3 text-sm" side="top" align="center">
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <p className="font-bold text-base">{glossData.lemma}</p>
             <p className="text-xs italic text-muted-foreground">{glossData.partOfSpeech}</p>
             {glossData.morphology && (
               <Badge variant="outline" className="text-xs font-mono">{glossData.morphology}</Badge>
             )}
             <p className="pt-1">{glossData.definition}</p>
+
+            {syntaxNote && syntaxNote !== 'N/A' && (
+                <>
+                    <Separator className="my-2" />
+                    <div className="flex items-start gap-2 text-xs">
+                        <MessageSquareQuote className="h-4 w-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                        <p className="text-muted-foreground">{syntaxNote}</p>
+                    </div>
+                </>
+            )}
           </div>
         </PopoverContent>
       </Popover>

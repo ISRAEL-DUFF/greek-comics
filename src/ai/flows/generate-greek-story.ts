@@ -21,7 +21,10 @@ export type GenerateGreekStoryInput = z.infer<typeof GenerateGreekStoryInputSche
 const GenerateGreekStoryOutputSchema = z.object({
   sentences: z.array(z.object({
     sentence: z.string().describe('A single sentence in Ancient Greek.'),
-    syntaxNotes: z.string().describe('Concise syntax notes explaining the grammatical structure of the sentence.'),
+    words: z.array(z.object({
+        word: z.string().describe('A single word from the sentence.'),
+        syntaxNote: z.string().describe('Concise syntax note explaining the grammatical role of this specific word in the sentence (e.g., "subject of verb λύει", "dative of possession").')
+    })).describe('An array of word objects, each with a syntax note.'),
   })).describe('The generated Ancient Greek story, as an array of sentence objects.'),
 });
 export type GenerateGreekStoryOutput = z.infer<typeof GenerateGreekStoryOutputSchema>;
@@ -42,9 +45,9 @@ const generateGreekStoryPrompt = ai.definePrompt({
 
 The story should be appropriate for the specified learner level. Use vocabulary and grammatical structures that are suitable for the level and grammar scope. The story should be coherent and engaging.
 
-For each sentence you generate, you MUST also provide concise syntax notes that explain the grammatical structure, such as identifying clauses, verb tenses, cases of nouns, etc.
+For each sentence you generate, you MUST provide a detailed breakdown for EACH word. This breakdown must include the word itself and a concise syntax note explaining its specific grammatical role in the sentence (e.g., "subject of verb", "dative of means", "modifies noun").
 
-You MUST return the story as an array of objects in the 'sentences' field of the JSON output. Each object must contain a 'sentence' field and a 'syntaxNotes' field.
+You MUST return the story as an array of sentence objects in the 'sentences' field of the JSON output. Each sentence object must contain the full 'sentence' string, and an array 'words', where each item has the 'word' and its 'syntaxNote'. Ensure the words in the 'words' array (including punctuation) reconstruct the 'sentence' exactly when joined with spaces.
 `,
 });
 

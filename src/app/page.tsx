@@ -3,9 +3,17 @@
 import { useState, useEffect } from 'react';
 import { StoryGeneratorForm } from '@/components/story-generator-form';
 import { StoryDisplay } from '@/components/story-display';
-import type { StoryResult, SavedStoryListItem, StoryData, GlossStoryOutput } from '@/app/actions';
+import type { StoryResult, SavedStoryListItem, StoryData, GlossStoryOutput, Sentence } from '@/app/actions';
 import { getSavedStoriesAction, getStoryByIdAction } from '@/app/actions';
 import { SavedStoriesList } from '@/components/saved-stories-list';
+
+function createSentencesFromStory(storyText: string): Sentence[] {
+    const sentenceStrings = storyText.match(/[^.!?]+[.!?]+/g) || [storyText];
+    return sentenceStrings.map(s => {
+      const words = s.trim().split(' ').map(w => ({ word: w, syntaxNote: 'N/A' }));
+      return { sentence: s.trim(), words };
+    });
+}
 
 export default function Home() {
   const [storyResult, setStoryResult] = useState<StoryResult | null>(null);
@@ -42,10 +50,10 @@ export default function Home() {
     const fullStory = await getStoryByIdAction(storyListItem.id);
     
     if (fullStory) {
-      // Backwards compatibility for old stories that don't have the new `sentences` array of objects
-      const sentences = fullStory.sentences && typeof fullStory.sentences[0] === 'object'
+      // Backwards compatibility for old stories that don't have the new `sentences.words` array of objects
+      const sentences = fullStory.sentences && fullStory.sentences[0]?.words
         ? fullStory.sentences
-        : (fullStory.story.match(/[^.!?]+[.!?]+/g) || [fullStory.story]).map(s => ({ sentence: s, syntaxNotes: 'N/A' }));
+        : createSentencesFromStory(fullStory.story);
 
       setStoryResult({
         data: {
