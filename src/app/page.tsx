@@ -7,13 +7,24 @@ import type { StoryResult, SavedStoryListItem, StoryData, GlossStoryOutput, Sent
 import { getSavedStoriesAction, getStoryByIdAction } from '@/app/actions';
 import { SavedStoriesList } from '@/components/saved-stories-list';
 
+/**
+ * Creates a modern `Sentence[]` array from a simple story string.
+ * This is a backward-compatibility helper for older saved stories.
+ * @param storyText The full story as a single string.
+ * @returns An array of Sentence objects.
+ */
 function createSentencesFromStory(storyText: string): Sentence[] {
+    // Split the story into sentences using punctuation as delimiters.
     const sentenceStrings = storyText.match(/[^.!?]+[.!?]+/g) || [storyText];
+    
     return sentenceStrings.map(s => {
-      const words = s.trim().split(' ').map(w => ({ word: w, syntaxNote: 'N/A' }));
-      return { sentence: s.trim(), words };
+      const trimmedSentence = s.trim();
+      // Split the sentence into words and create the word objects.
+      const words = trimmedSentence.split(/\s+/).map(w => ({ word: w, syntaxNote: 'N/A' }));
+      return { sentence: trimmedSentence, words };
     });
 }
+
 
 export default function Home() {
   const [storyResult, setStoryResult] = useState<StoryResult | null>(null);
@@ -50,8 +61,10 @@ export default function Home() {
     const fullStory = await getStoryByIdAction(storyListItem.id);
     
     if (fullStory) {
-      // Backwards compatibility for old stories that don't have the new `sentences.words` array of objects
-      const sentences = fullStory.sentences && fullStory.sentences[0]?.words
+      // BACKWARD COMPATIBILITY CHECK:
+      // Check if the loaded story has the new `sentences.words` array of objects.
+      // If not, it's an old story format, and we need to convert it.
+      const sentences = (fullStory.sentences && fullStory.sentences.length > 0 && fullStory.sentences[0].words)
         ? fullStory.sentences
         : createSentencesFromStory(fullStory.story);
 
