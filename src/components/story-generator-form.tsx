@@ -31,6 +31,8 @@ export function StoryGeneratorForm({ setIsLoading, setStoryResult, isLoading }: 
       level: 'Beginner',
       topic: 'A cat is in the house',
       grammarScope: 'Present tense verbs, singular nouns, basic prepositions',
+      minSentences: 3,
+      maxSentences: 5,
     },
   });
 
@@ -42,6 +44,8 @@ export function StoryGeneratorForm({ setIsLoading, setStoryResult, isLoading }: 
     formData.append('level', values.level);
     formData.append('topic', values.topic);
     formData.append('grammarScope', values.grammarScope);
+    formData.append('minSentences', values.minSentences.toString());
+    formData.append('maxSentences', values.maxSentences.toString());
 
     const result = await generateStoryAction(formData);
 
@@ -54,7 +58,12 @@ export function StoryGeneratorForm({ setIsLoading, setStoryResult, isLoading }: 
         description: result.error,
       });
       if (result.fieldErrors) {
-        // You could optionally set form errors here if needed
+        if(result.fieldErrors.minSentences){
+          form.setError("minSentences", { type: "manual", message: result.fieldErrors.minSentences.join(', ') });
+        }
+        if(result.fieldErrors.maxSentences){
+          form.setError("maxSentences", { type: "manual", message: result.fieldErrors.maxSentences.join(', ') });
+        }
       }
     } else {
       setStoryResult(result);
@@ -118,6 +127,34 @@ export function StoryGeneratorForm({ setIsLoading, setStoryResult, isLoading }: 
                 </FormItem>
               )}
             />
+            <div className="grid grid-cols-2 gap-4">
+               <FormField
+                  control={form.control}
+                  name="minSentences"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Min Sentences</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="maxSentences"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Max Sentences</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            </div>
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={isLoading} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">

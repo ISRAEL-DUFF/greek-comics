@@ -4,7 +4,13 @@ export const StoryFormSchema = z.object({
   level: z.enum(['Beginner', 'Intermediate', 'Advanced']),
   topic: z.string().min(3, 'Topic must be at least 3 characters long.').max(100, 'Topic must be 100 characters or less.'),
   grammarScope: z.string().min(3, 'Grammar scope must be at least 3 characters long.').max(100, 'Grammar scope must be 100 characters or less.'),
+  minSentences: z.coerce.number().int().min(1, 'Must be at least 1.').default(3),
+  maxSentences: z.coerce.number().int().min(1, 'Must be at least 1.').default(5),
+}).refine(data => data.minSentences <= data.maxSentences, {
+  message: "Min sentences must be less than or equal to max sentences.",
+  path: ["minSentences"], // Set the error on the minSentences field
 });
+
 
 export const GlossWordOutputSchema = z.object({
   lemma: z.string().describe('The dictionary form (lemma) of the word.'),
