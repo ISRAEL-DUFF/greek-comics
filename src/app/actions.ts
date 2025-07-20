@@ -73,6 +73,8 @@ export async function generateStoryAction(
     level: formData.get('level'),
     topic: formData.get('topic'),
     grammarScope: formData.get('grammarScope'),
+    minSentences: formData.get('minSentences'),
+    maxSentences: formData.get('maxSentences'),
   });
 
   if (!validatedFields.success) {

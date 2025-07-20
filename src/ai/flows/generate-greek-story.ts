@@ -15,6 +15,8 @@ const GenerateGreekStoryInputSchema = z.object({
   level: z.enum(['Beginner', 'Intermediate', 'Advanced']).describe('The learner level.'),
   topic: z.string().describe('The topic of the story.'),
   grammarScope: z.string().describe('The grammar scope to use in the story.'),
+  minSentences: z.number().describe('The minimum number of sentences in the story.'),
+  maxSentences: z.number().describe('The maximum number of sentences in the story.'),
 });
 export type GenerateGreekStoryInput = z.infer<typeof GenerateGreekStoryInputSchema>;
 
@@ -42,8 +44,9 @@ const generateGreekStoryPrompt = ai.definePrompt({
   Level: {{{level}}}
   Topic: {{{topic}}}
   Grammar Scope: {{{grammarScope}}}
+  Number of sentences: Between {{{minSentences}}} and {{{maxSentences}}}.
 
-The story should be appropriate for the specified learner level. Use vocabulary and grammatical structures that are suitable for the level and grammar scope. The story should be coherent and engaging.
+The story should be appropriate for the specified learner level and contain a total number of sentences within the specified range. Use vocabulary and grammatical structures that are suitable for the level and grammar scope. The story should be coherent and engaging.
 
 For each sentence you generate, you MUST provide a detailed breakdown for EACH word. This breakdown must include the word itself and a concise syntax note explaining its specific grammatical role in the sentence (e.g., "subject of verb", "dative of means", "modifies noun").
 
