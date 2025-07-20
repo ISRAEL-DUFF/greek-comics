@@ -4,7 +4,7 @@ import React, { useRef, useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson, Info, RefreshCcw, MessageSquareQuote } from 'lucide-react';
+import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson, Info, RefreshCcw, MessageSquareQuote, Image as ImageIcon } from 'lucide-react';
 import type { StoryResult, GlossStoryOutput, Sentence, Word } from '@/app/actions';
 import { WordGloss } from './word-gloss';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 
 interface StoryDisplayProps {
@@ -36,6 +38,7 @@ const isSupabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.en
 export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStoryId, onGlossesRegenerated }: StoryDisplayProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showImages, setShowImages] = useState(true);
   const { toast } = useToast();
   const storyContentRef = useRef<HTMLDivElement>(null);
 
@@ -204,7 +207,19 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
         </Card>
       )}
 
-      <div className="no-print flex justify-end gap-2 flex-wrap">
+      <div className="no-print flex justify-end gap-2 flex-wrap items-center">
+        <div className="flex items-center space-x-2 mr-auto">
+          <Switch
+            id="show-images"
+            checked={showImages}
+            onCheckedChange={setShowImages}
+          />
+          <Label htmlFor="show-images" className="flex items-center gap-2 text-sm">
+            <ImageIcon className="h-4 w-4" />
+            Show Illustrations
+          </Label>
+        </div>
+
         <Dialog>
             <DialogTrigger asChild>
                 <Button variant="outline">
@@ -266,7 +281,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
               className="story-item flex flex-col gap-8"
             >
               <div className="flex flex-col md:flex-row gap-8 items-center">
-                {illustration && (
+                {showImages && illustration && (
                   <div
                     className={cn(
                       'w-full md:w-1/2',
@@ -286,8 +301,9 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
                 )}
                 <div
                   className={cn(
-                    'w-full md:w-1/2',
-                    isImageRight ? 'md:order-1' : 'md:order-2'
+                    'w-full',
+                    showImages && illustration && 'md:w-1/2',
+                    isImageRight && showImages && illustration ? 'md:order-1' : 'md:order-2'
                   )}
                 >
                   <p className="text-xl lg:text-2xl leading-relaxed lg:leading-loose lang-grc font-body">
