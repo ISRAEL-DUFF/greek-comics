@@ -57,7 +57,7 @@ For each sentence you generate, you MUST provide the following in the output:
 2.  An array 'words', where each item has the 'word' and its concise 'syntaxNote' explaining its specific grammatical role in the sentence (e.g., "subject of verb", "dative of means", "modifies noun"). Ensure the words in the 'words' array (including punctuation) reconstruct the 'sentence' exactly when joined with spaces.
 3.  A 'detailedSyntax' object containing:
     a. A full 'translation' of the sentence into English.
-    b. A detailed 'breakdown' of the sentence's syntax and semantics. This should be a clause-by-clause and word-by-word analysis.
+    b. A detailed 'breakdown' of the sentence's syntax and semantics. This should be a clause-by-clause and word-by-word analysis. For this breakdown, each Greek word being analyzed must start on a new line and be enclosed in bold tags, like this: "<b>[Greek Word]</b>: [analysis...]".
 
 You MUST return the story as an array of sentence objects in the 'sentences' field of the JSON output.
 `,
