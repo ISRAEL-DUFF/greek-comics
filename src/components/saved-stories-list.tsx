@@ -20,21 +20,32 @@ interface SavedStoriesListProps {
   currentStoryId: number | null;
 }
 
+const DetailedSyntaxSchema = z.object({
+  translation: z.string(),
+  breakdown: z.string(),
+}).optional();
+
+// This schema is more flexible for backward compatibility when importing.
 const StoryDataSchema = z.object({
   topic: z.string(),
   story: z.string(),
-  sentences: z.array(z.object({
-    sentence: z.string(),
-    words: z.array(z.object({
-        word: z.string(),
-        syntaxNote: z.string().optional().default('N/A'),
-    }))
-  })),
+  sentences: z.array(z.union([
+    z.string(), // Old format: array of sentence strings
+    z.object({ // New format: array of sentence objects
+        sentence: z.string(),
+        words: z.array(z.object({
+            word: z.string(),
+            syntaxNote: z.string().optional().default('N/A'),
+        })),
+        detailedSyntax: DetailedSyntaxSchema,
+    })
+  ])),
   illustrations: z.array(z.string()),
   grammar_scope: z.string(),
   level: z.string(),
-  glosses: GlossStoryOutputSchema,
+  glosses: GlossStoryOutputSchema.optional().default({}),
 });
+
 
 type ImportResult = {
   data?: StoryData;
@@ -62,7 +73,7 @@ export function SavedStoriesList({ stories, onSelectStory, onStoryImported, onIm
         return { error: `Invalid JSON format. ${validatedData.error.flatten().formErrors.join(', ')}` };
       }
   
-      return { data: validatedData.data };
+      return { data: validatedData.data as StoryData };
   
     } catch (error) {
       if (error instanceof SyntaxError) {
@@ -142,7 +153,7 @@ export function SavedStoriesList({ stories, onSelectStory, onStoryImported, onIm
                     key={story.id}
                     variant={story.id === currentStoryId ? "secondary" : "ghost"}
                     className={cn(
-                      "w-[70vw] lg:w-full justify-start h-auto py-2 px-3 text-left",
+                      "w-full justify-start h-auto py-2 px-3 text-left",
                       story.id === currentStoryId && "bg-accent/20"
                     )}
                     onClick={() => onSelectStory(story)}
