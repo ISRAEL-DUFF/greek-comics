@@ -21,7 +21,7 @@ function createSentencesFromStory(storyText: string): Sentence[] {
       const trimmedSentence = s.trim();
       // Split the sentence into words and create the word objects.
       const words = trimmedSentence.split(/\s+/).map(w => ({ word: w, syntaxNote: 'N/A' }));
-      return { sentence: trimmedSentence, words };
+      return { sentence: trimmedSentence, words }; // detailedSyntax will be undefined
     });
 }
 
@@ -104,7 +104,17 @@ export default function Home() {
   
   const handleImportedStory = (importedData: StoryData | null) => {
     if (importedData) {
-      setStoryResult({ data: importedData });
+      // BACKWARD COMPATIBILITY: Run the same checks as for saved stories.
+      const sentences = (importedData.sentences && importedData.sentences.length > 0 && importedData.sentences[0].words)
+        ? importedData.sentences
+        : createSentencesFromStory(importedData.story);
+      
+      const storyDataWithCompatibility = {
+        ...importedData,
+        sentences,
+      };
+
+      setStoryResult({ data: storyDataWithCompatibility });
       setCurrentStoryId(null);
     }
     // This will be called after the import action is complete, successful or not.

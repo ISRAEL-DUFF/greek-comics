@@ -4,7 +4,7 @@ import React, { useRef, useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson, Info, RefreshCcw, MessageSquareQuote, Image as ImageIcon } from 'lucide-react';
+import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson, Info, RefreshCcw, MessageSquareQuote, Image as ImageIcon, WholeWord } from 'lucide-react';
 import type { StoryResult, GlossStoryOutput, Sentence, Word } from '@/app/actions';
 import { WordGloss } from './word-gloss';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dialog"
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from './ui/scroll-area';
+import { Separator } from './ui/separator';
 
 
 interface StoryDisplayProps {
@@ -39,6 +41,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
   const [isSaving, setIsSaving] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showImages, setShowImages] = useState(true);
+  const [showSyntax, setShowSyntax] = useState(false);
   const { toast } = useToast();
   const storyContentRef = useRef<HTMLDivElement>(null);
 
@@ -208,16 +211,29 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
       )}
 
       <div className="no-print flex justify-end gap-2 flex-wrap items-center">
-        <div className="flex items-center space-x-2 mr-auto">
-          <Switch
-            id="show-images"
-            checked={showImages}
-            onCheckedChange={setShowImages}
-          />
-          <Label htmlFor="show-images" className="flex items-center gap-2 text-sm">
-            <ImageIcon className="h-4 w-4" />
-            Show Illustrations
-          </Label>
+        <div className="flex items-center space-x-4 mr-auto">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="show-images"
+              checked={showImages}
+              onCheckedChange={setShowImages}
+            />
+            <Label htmlFor="show-images" className="flex items-center gap-2 text-sm">
+              <ImageIcon className="h-4 w-4" />
+              Show Illustrations
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="show-syntax"
+              checked={showSyntax}
+              onCheckedChange={setShowSyntax}
+            />
+            <Label htmlFor="show-syntax" className="flex items-center gap-2 text-sm">
+              <WholeWord className="h-4 w-4" />
+              Show Syntax Analysis
+            </Label>
+          </div>
         </div>
 
         <Dialog>
@@ -301,7 +317,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
                 )}
                 <div
                   className={cn(
-                    'w-full',
+                    'w-full flex flex-col',
                     showImages && illustration && 'md:w-1/2',
                     isImageRight && showImages && illustration ? 'md:order-1' : 'md:order-2'
                   )}
@@ -311,6 +327,48 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
                       <WordGloss key={i} wordObj={wordObj} glosses={glosses} />
                     ))}
                   </p>
+                  
+                  {showSyntax && sentenceObj.detailedSyntax && (
+                    <div className="mt-4 text-right">
+                       <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground">
+                                <MessageSquareQuote className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+                            <DialogHeader>
+                                <DialogTitle className="font-headline text-2xl">Sentence Analysis</DialogTitle>
+                                <DialogDescription className="font-body text-lg">
+                                  {sentenceObj.sentence}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="flex-1 overflow-hidden">
+                               <ScrollArea className="h-full pr-6">
+                                    <div className="space-y-4">
+                                      <div>
+                                          <h4 className="font-semibold text-primary">Translation</h4>
+                                          <p className="text-base italic">
+                                              {sentenceObj.detailedSyntax.translation}
+                                          </p>
+                                      </div>
+                                      <Separator />
+                                      <div>
+                                          <h4 className="font-semibold text-primary">Syntax & Semantic Breakdown</h4>
+                                          <div 
+                                              className="prose prose-sm max-w-none whitespace-pre-wrap"
+                                              dangerouslySetInnerHTML={{ __html: sentenceObj.detailedSyntax.breakdown.replace(/\n/g, '<br />') }}
+                                          >
+                                          </div>
+                                      </div>
+                                    </div>
+                               </ScrollArea>
+                            </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  )}
+
                 </div>
               </div>
             </div>

@@ -27,6 +27,10 @@ const GenerateGreekStoryOutputSchema = z.object({
         word: z.string().describe('A single word from the sentence.'),
         syntaxNote: z.string().describe('Concise syntax note explaining the grammatical role of this specific word in the sentence (e.g., "subject of verb λύει", "dative of possession").')
     })).describe('An array of word objects, each with a syntax note.'),
+    detailedSyntax: z.object({
+        translation: z.string().describe('A full English translation of the sentence.'),
+        breakdown: z.string().describe('A detailed syntax and semantic breakdown of the sentence, analyzing it clause by clause and word by word.'),
+    }).describe('A detailed analysis of the sentence.')
   })).describe('The generated Ancient Greek story, as an array of sentence objects.'),
 });
 export type GenerateGreekStoryOutput = z.infer<typeof GenerateGreekStoryOutputSchema>;
@@ -48,9 +52,14 @@ const generateGreekStoryPrompt = ai.definePrompt({
 
 The story should be appropriate for the specified learner level and contain a total number of sentences within the specified range. Use vocabulary and grammatical structures that are suitable for the level and grammar scope. The story should be coherent and engaging.
 
-For each sentence you generate, you MUST provide a detailed breakdown for EACH word. This breakdown must include the word itself and a concise syntax note explaining its specific grammatical role in the sentence (e.g., "subject of verb", "dative of means", "modifies noun").
+For each sentence you generate, you MUST provide the following in the output:
+1.  The full 'sentence' string in Ancient Greek.
+2.  An array 'words', where each item has the 'word' and its concise 'syntaxNote' explaining its specific grammatical role in the sentence (e.g., "subject of verb", "dative of means", "modifies noun"). Ensure the words in the 'words' array (including punctuation) reconstruct the 'sentence' exactly when joined with spaces.
+3.  A 'detailedSyntax' object containing:
+    a. A full 'translation' of the sentence into English.
+    b. A detailed 'breakdown' of the sentence's syntax and semantics. This should be a clause-by-clause and word-by-word analysis.
 
-You MUST return the story as an array of sentence objects in the 'sentences' field of the JSON output. Each sentence object must contain the full 'sentence' string, and an array 'words', where each item has the 'word' and its 'syntaxNote'. Ensure the words in the 'words' array (including punctuation) reconstruct the 'sentence' exactly when joined with spaces.
+You MUST return the story as an array of sentence objects in the 'sentences' field of the JSON output.
 `,
 });
 

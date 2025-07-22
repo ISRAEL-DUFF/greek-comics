@@ -21,6 +21,10 @@ export type Word = {
 export type Sentence = {
   sentence: string;
   words: Word[];
+  detailedSyntax?: {
+    translation: string;
+    breakdown: string;
+  };
 };
 
 export type StoryData = {
