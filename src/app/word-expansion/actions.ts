@@ -101,6 +101,7 @@ export async function getExpandedWordsAction(): Promise<ExpandedWordListItem[]> 
       .from(EXPANDED_WORDS_TABLE)
       .select('id, word')
       .not('word', 'eq', '') // Filter out rows where word is an empty string
+      .eq('language', 'greek')
       .order('word', { ascending: true });
 
     if (error) {
