@@ -35,7 +35,7 @@ const expandWordPrompt = ai.definePrompt({
 **If the word is a VERB:**
 1.  **Gloss**: Provide its dictionary form (lemma), part of speech, and a concise English definition.
 2.  **Principal Parts**: Generate a Markdown table of its principal parts.
-3.  **Full Conjugation**: Generate full conjugation paradigms in Markdown tables for all tenses and moods (Indicative, Subjunctive, Optative, Imperative), including participles and infinitives.
+3.  **Full Conjugation**: Generate full conjugation paradigms in Markdown tables. You must include all tenses, moods (Indicative, Subjunctive, Optative, Imperative), and voices (Active, Middle, and Passive). Also include all participles and infinitives.
 4.  **Etymology**: Provide a detailed etymology of the word.
 
 **If the word is a PARTICIPLE:**
