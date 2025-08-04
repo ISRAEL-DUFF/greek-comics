@@ -40,6 +40,7 @@ function parseMarkdownTable(markdown: string): string {
                 html += '</tbody></table>';
                 inTable = false;
             }
+            // Add the line back, it will be processed for <br> tags later
             html += line + '\n';
         }
     }
@@ -61,7 +62,8 @@ export function MarkdownDisplay({ markdown }: MarkdownDisplayProps) {
     .replace(/^### (.*$)/gim, '<h3 class="font-headline text-xl font-bold mt-4 mb-2">$1</h3>')
     .replace(/^#### (.*$)/gim, '<h4 class="font-headline text-lg font-semibold mt-3 mb-1">$1</h4>')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>');
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br />'); // Convert all newlines to <br> tags
 
   return (
     <ScrollArea className="h-full max-h-[75vh] pr-4">
