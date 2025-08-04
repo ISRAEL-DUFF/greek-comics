@@ -52,7 +52,7 @@ export async function generateAndSaveWordExpansionAction(word: string): Promise<
 
     return { data };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in generateAndSaveWordExpansionAction:', error);
     return { error: 'An unexpected error occurred during word expansion.' };
   }
