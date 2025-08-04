@@ -20,6 +20,11 @@ type GenerateResult = {
     error?: string;
 };
 
+type UpdateResult = {
+    data?: ExpandedWord;
+    error?: string;
+}
+
 // Action to generate, save, and return a word expansion
 export async function generateAndSaveWordExpansionAction(word: string): Promise<GenerateResult> {
   if (!word) {
@@ -57,6 +62,33 @@ export async function generateAndSaveWordExpansionAction(word: string): Promise<
     return { error: 'An unexpected error occurred during word expansion.' };
   }
 }
+
+// Action to update an existing word expansion
+export async function updateWordExpansionAction(id: number, newExpansion: string): Promise<UpdateResult> {
+    if (!supabase) {
+      return { error: 'Supabase is not configured. Cannot update word.' };
+    }
+  
+    try {
+      const { data, error } = await supabase
+        .from(EXPANDED_WORDS_TABLE)
+        .update({ expansion: newExpansion })
+        .eq('id', id)
+        .select()
+        .single();
+  
+      if (error) {
+        console.error('Error updating expanded word:', error);
+        return { error: `Database error: ${error.message}` };
+      }
+  
+      return { data };
+  
+    } catch (error: any) {
+      console.error('Error in updateWordExpansionAction:', error);
+      return { error: 'An unexpected error occurred while updating the word.' };
+    }
+  }
 
 // Action to get the list of all expanded words
 export async function getExpandedWordsAction(): Promise<ExpandedWordListItem[]> {

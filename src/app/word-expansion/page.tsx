@@ -5,6 +5,7 @@ import {
   getExpandedWordsAction,
   getExpandedWordByIdAction,
   generateAndSaveWordExpansionAction,
+  updateWordExpansionAction,
   type ExpandedWordListItem,
   type ExpandedWord,
 } from './actions';
@@ -13,20 +14,26 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { Loader2, Sparkles, Wand2, Edit, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { MarkdownDisplay } from '@/components/markdown-display';
+import { MarkdownEditor } from '@/components/markdown-editor';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function WordExpansionPage() {
   const [word, setWord] = useState('');
-  const [isPending, startTransition] = useTransition();
+  const [isGenerating, startGeneratingTransition] = useTransition();
+  const [isSaving, startSavingTransition] = useTransition();
+  
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   
   const [expandedWords, setExpandedWords] = useState<ExpandedWordListItem[]>([]);
   const [currentWord, setCurrentWord] = useState<ExpandedWord | null>(null);
+
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedContent, setEditedContent] = useState('');
   
   const { toast } = useToast();
 
@@ -43,18 +50,23 @@ export default function WordExpansionPage() {
 
   const handleSelectWord = async (item: ExpandedWordListItem) => {
     setIsLoadingContent(true);
+    setIsEditMode(false);
     setCurrentWord(null);
     const fullWord = await getExpandedWordByIdAction(item.id);
     setCurrentWord(fullWord);
+    if(fullWord) {
+      setEditedContent(fullWord.expansion);
+    }
     setIsLoadingContent(false);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleGenerateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!word.trim()) return;
 
-    startTransition(async () => {
+    startGeneratingTransition(async () => {
       setCurrentWord(null);
+      setIsEditMode(false);
       setIsLoadingContent(true);
       const result = await generateAndSaveWordExpansionAction(word);
       setIsLoadingContent(false);
@@ -72,12 +84,36 @@ export default function WordExpansionPage() {
           description: `Successfully generated details for "${result.data?.word}".`,
         });
         setCurrentWord(result.data!);
+        setEditedContent(result.data!.expansion);
         setWord('');
-        // Refresh the list
         fetchExpandedWords();
       }
     });
   };
+
+  const handleSaveChanges = () => {
+    if (!currentWord) return;
+
+    startSavingTransition(async () => {
+        const result = await updateWordExpansionAction(currentWord.id, editedContent);
+        if (result.error) {
+            toast({
+                variant: 'destructive',
+                title: 'Save Failed',
+                description: result.error,
+            });
+        } else {
+            toast({
+                title: 'Changes Saved',
+                description: 'Your edits have been successfully saved.',
+            });
+            setCurrentWord(result.data!);
+            setIsEditMode(false);
+        }
+    });
+  }
+
+  const isLoading = isGenerating || isLoadingContent;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
@@ -101,20 +137,20 @@ export default function WordExpansionPage() {
                   <CardTitle>Expand a Word</CardTitle>
                   <CardDescription>Enter a Greek word to analyze.</CardDescription>
                 </CardHeader>
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleGenerateSubmit}>
                   <CardContent>
                     <Input
                       placeholder="e.g., λόγος"
                       value={word}
                       onChange={(e) => setWord(e.target.value)}
-                      disabled={isPending}
+                      disabled={isGenerating}
                       className="font-body text-lg"
                     />
                   </CardContent>
                   <CardFooter>
-                    <Button type="submit" disabled={isPending || !word.trim()} className="w-full">
-                      {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                      {isPending ? 'Generating...' : 'Generate'}
+                    <Button type="submit" disabled={isGenerating || !word.trim()} className="w-full">
+                      {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                      {isGenerating ? 'Generating...' : 'Generate'}
                     </Button>
                   </CardFooter>
                 </form>
@@ -158,8 +194,22 @@ export default function WordExpansionPage() {
           </aside>
           <div className="lg:col-span-8 xl:col-span-9">
             <Card className="min-h-[60vh]">
+                <CardHeader className="flex-row items-center justify-between">
+                    <div className="space-y-1">
+                        <CardTitle>Analysis</CardTitle>
+                        <CardDescription>
+                            {currentWord ? `Details for "${currentWord.word}"` : 'Select or generate a word to see its analysis.'}
+                        </CardDescription>
+                    </div>
+                    {currentWord && !isEditMode && (
+                        <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                        </Button>
+                    )}
+                </CardHeader>
                 <CardContent className="p-2 md:p-6 h-full">
-                    {isLoadingContent || isPending ? (
+                    {isLoading ? (
                         <div className="space-y-4 pt-6">
                             <Skeleton className="h-8 w-1/4" />
                             <Skeleton className="h-4 w-1/3" />
@@ -170,7 +220,26 @@ export default function WordExpansionPage() {
                             </div>
                         </div>
                     ) : currentWord ? (
-                        <MarkdownDisplay markdown={currentWord.expansion} />
+                        isEditMode ? (
+                            <div className="space-y-4">
+                                <MarkdownEditor
+                                    value={editedContent}
+                                    onChange={(value) => setEditedContent(value || '')}
+                                />
+                                <div className="flex justify-end gap-2">
+                                    <Button variant="ghost" onClick={() => {
+                                        setIsEditMode(false);
+                                        setEditedContent(currentWord.expansion);
+                                    }}>Cancel</Button>
+                                    <Button onClick={handleSaveChanges} disabled={isSaving}>
+                                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                        Save Changes
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <MarkdownDisplay markdown={currentWord.expansion} />
+                        )
                     ) : (
                         <div className="flex flex-col items-center justify-center p-8 text-center h-full">
                             <Wand2 className="h-16 w-16 text-muted-foreground/50" />
