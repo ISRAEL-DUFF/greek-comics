@@ -64,7 +64,7 @@ export default function Home() {
       // BACKWARD COMPATIBILITY CHECK:
       // Check if the loaded story has the new `sentences.words` array of objects.
       // If not, it's an old story format, and we need to convert it.
-      const sentences = (fullStory.sentences && fullStory.sentences.length > 0 && fullStory.sentences[0].words)
+      const sentences = (fullStory.sentences && fullStory.sentences.length > 0 && typeof fullStory.sentences[0] !== 'string' && fullStory.sentences[0].words)
         ? fullStory.sentences
         : createSentencesFromStory(fullStory.story);
 
@@ -105,7 +105,7 @@ export default function Home() {
   const handleImportedStory = (importedData: StoryData | null) => {
     if (importedData) {
       // BACKWARD COMPATIBILITY: Run the same checks as for saved stories.
-      const sentences = (importedData.sentences && importedData.sentences.length > 0 && importedData.sentences[0].words)
+      const sentences = (importedData.sentences && importedData.sentences.length > 0 && typeof importedData.sentences[0] !== 'string' && importedData.sentences[0].words)
         ? importedData.sentences
         : createSentencesFromStory(importedData.story);
       
