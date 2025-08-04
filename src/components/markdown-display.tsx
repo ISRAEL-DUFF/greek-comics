@@ -1,4 +1,3 @@
-import { ScrollArea } from './ui/scroll-area';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -9,16 +8,14 @@ interface MarkdownDisplayProps {
 // A component to render markdown with basic styling.
 export function MarkdownDisplay({ markdown }: MarkdownDisplayProps) {
   return (
-    <ScrollArea className="h-full max-h-[75vh] pr-4">
-        <div
-            className="prose prose-sm prose-p:font-body prose-headings:font-headline prose-headings:text-primary max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2"
-        >
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-          >
-            {markdown}
-          </ReactMarkdown>
-        </div>
-    </ScrollArea>
+    <div
+        className="prose prose-sm prose-p:font-body prose-headings:font-headline prose-headings:text-primary max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2"
+    >
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+      >
+        {markdown}
+      </ReactMarkdown>
+    </div>
   );
 }
