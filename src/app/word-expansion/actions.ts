@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from 'zod';
@@ -99,6 +100,8 @@ export async function getExpandedWordsAction(): Promise<ExpandedWordListItem[]> 
     const { data, error } = await supabase
       .from(EXPANDED_WORDS_TABLE)
       .select('id, word')
+      .not('word', 'eq', '') // Filter out rows where word is an empty string
+      .eq('language', 'greek')
       .order('word', { ascending: true });
 
     if (error) {
