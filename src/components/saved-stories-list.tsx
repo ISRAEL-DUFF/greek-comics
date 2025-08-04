@@ -153,7 +153,7 @@ export function SavedStoriesList({ stories, onSelectStory, onStoryImported, onIm
                     key={story.id}
                     variant={story.id === currentStoryId ? "secondary" : "ghost"}
                     className={cn(
-                      "w-full justify-start h-auto py-2 px-3 text-left",
+                      "w-[70vw] lg:w-full justify-start h-auto py-2 px-3 text-left",
                       story.id === currentStoryId && "bg-accent/20"
                     )}
                     onClick={() => onSelectStory(story)}
