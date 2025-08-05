@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * @fileOverview Provides glosses for all unique words in a given story.
+ * @fileOverview Provides glosses for all unique words in a given story using an efficient batching and retry mechanism.
  *
  * - glossStory - A function that returns a map of words to their definitions.
  * - GlossStoryInput - The input type for the glossStory function.
@@ -10,8 +10,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { GlossWordOutputSchema, GlossStoryOutputSchema } from '@/lib/schemas';
-import { glossWord } from './gloss-word';
+import { GlossStoryOutputSchema } from '@/lib/schemas';
+import { glossWords } from './gloss-words';
 
 const GlossStoryInputSchema = z.object({
   sentences: z.array(z.object({
@@ -30,6 +30,8 @@ export async function glossStory(input: GlossStoryInput): Promise<GlossStoryOutp
   return glossStoryFlow(input);
 }
 
+const MAX_RETRIES = 3;
+
 const glossStoryFlow = ai.defineFlow(
   {
     name: 'glossStoryFlow',
@@ -39,7 +41,7 @@ const glossStoryFlow = ai.defineFlow(
   async input => {
     // Extract all words from the structured sentences, then get unique words.
     const allWords = input.sentences.flatMap(s => s.words.map(w => w.word));
-    const uniqueWords = Array.from(
+    let wordsToGloss = Array.from(
       new Set(
         allWords
           .map(word => word.toLowerCase().replace(/[.,·;]/g, ''))
@@ -48,24 +50,36 @@ const glossStoryFlow = ai.defineFlow(
     );
 
     const glossMap: GlossStoryOutput = {};
+    let retries = 0;
 
-    // Create an array of promises, one for each unique word.
-    const glossPromises = uniqueWords.map(async (word) => {
-      try {
-        // Call the individual glossWord flow for each word.
-        const gloss = await glossWord({ word });
-        if (gloss) {
-          // The key is the normalized word.
-          glossMap[word] = gloss;
-        }
-      } catch (error) {
-        // If a single word fails, log the error and continue with the others.
-        console.error(`Failed to gloss word "${word}":`, error);
+    while (wordsToGloss.length > 0 && retries < MAX_RETRIES) {
+      if (retries > 0) {
+        console.log(`Retrying ${wordsToGloss.length} words that failed to gloss...`);
       }
-    });
 
-    // Wait for all promises to settle (either resolve or reject).
-    await Promise.all(glossPromises);
+      try {
+        const result = await glossWords({ words: wordsToGloss });
+        
+        // Add successfully glossed words to our main map
+        for (const word in result) {
+            if(result[word]) {
+                glossMap[word] = result[word];
+            }
+        }
+
+        // Determine which words were missed by the AI and need to be retried
+        wordsToGloss = wordsToGloss.filter(word => !result.hasOwnProperty(word.toLowerCase()));
+
+      } catch (error) {
+        console.error(`An error occurred during a batch gloss attempt (retry ${retries + 1}):`, error);
+        // On error, we don't know which words succeeded, so we retry the whole remaining batch.
+      }
+      retries++;
+    }
+
+    if (wordsToGloss.length > 0) {
+        console.warn(`After ${MAX_RETRIES} retries, ${wordsToGloss.length} words could not be glossed:`, wordsToGloss);
+    }
 
     return glossMap;
   }
