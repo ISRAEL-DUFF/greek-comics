@@ -62,13 +62,18 @@ const glossStoryFlow = ai.defineFlow(
         
         // Add successfully glossed words to our main map
         for (const word in result) {
+            // Check if the result for the word is not null/undefined before adding.
             if(result[word]) {
                 glossMap[word] = result[word];
             }
         }
 
-        // Determine which words were missed by the AI and need to be retried
-        wordsToGloss = wordsToGloss.filter(word => !result.hasOwnProperty(word.toLowerCase().replace(/[.,·;]/g, '')));
+        // Determine which words were missed or returned null by the AI and need to be retried
+        wordsToGloss = wordsToGloss.filter(word => {
+            const normalizedWord = word.toLowerCase().replace(/[.,·;]/g, '');
+            // Retry if the word is not in the result map OR if the value for it is null.
+            return !result.hasOwnProperty(normalizedWord) || !result[normalizedWord];
+        });
 
       } catch (error) {
         console.error(`An error occurred during a batch gloss attempt (retry ${retries + 1}):`, error);
