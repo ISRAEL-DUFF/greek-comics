@@ -38,7 +38,7 @@ export async function generateAndSaveWordExpansionAction(words: string): Promise
   }
 
   // Split the input string by commas, trim whitespace, and filter out empty strings.
-  const wordList = words.split(',').map(w => w.trim()).filter(Boolean);
+  const wordList = words.split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
   if (wordList.length === 0) {
     return { error: 'No valid words provided.' };
   }
@@ -47,36 +47,52 @@ export async function generateAndSaveWordExpansionAction(words: string): Promise
 
   try {
     for (const word of wordList) {
-        // 1. Generate the expansion for the current word
+        // 1. Check if the word already exists in the database (case-insensitive)
+        const { data: existingWord, error: fetchError } = await supabase
+            .from(EXPANDED_WORDS_TABLE)
+            .select('*')
+            .eq('word', word)
+            .eq('language', 'greek')
+            .maybeSingle();
+
+        if (fetchError) {
+            console.error(`Error fetching word "${word}":`, fetchError);
+            return { error: `Database fetch error for "${word}": ${fetchError.message}` };
+        }
+        
+        // 2. If it exists, add it to the results and continue
+        if (existingWord) {
+            generatedWords.push(existingWord);
+            continue;
+        }
+
+        // 3. If it doesn't exist, generate the expansion
         const { expansion } = await expandWord({ word });
 
         if (!expansion) {
-            // We can decide to either stop or continue. Let's continue and report at the end.
             console.warn(`Failed to generate expansion for "${word}".`);
-            continue; // Skip to the next word
+            continue;
         }
         
-        // 2. Save to Supabase
-        const { data, error } = await supabase
+        // 4. Save the new expansion to Supabase
+        const { data: newWord, error: insertError } = await supabase
             .from(EXPANDED_WORDS_TABLE)
-            .insert({ word: word.toLowerCase(), expansion, language: 'greek' })
+            .insert({ word, expansion, language: 'greek' })
             .select()
             .single();
 
-        if (error) {
-            console.error(`Error saving expanded word "${word}":`, error);
-            // In a multi-word scenario, we might want to continue and report failures later.
-            // For now, we'll stop on the first DB error.
-            return { error: `Database error for "${word}": ${error.message}` };
+        if (insertError) {
+            console.error(`Error saving expanded word "${word}":`, insertError);
+            return { error: `Database insert error for "${word}": ${insertError.message}` };
         }
         
-        if (data) {
-            generatedWords.push(data);
+        if (newWord) {
+            generatedWords.push(newWord);
         }
     }
 
     if (generatedWords.length === 0) {
-      return { error: 'Could not generate an expansion for any of the provided words.' };
+      return { error: 'Could not find or generate an expansion for any of the provided words.' };
     }
 
     return { data: generatedWords };
