@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useTransition, useMemo } from 'react';
+import React, { useState, useEffect, useTransition, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   getExpandedWordsAction,
@@ -337,8 +337,8 @@ function WordExpansionContent() {
 // The page needs to be wrapped in a Suspense boundary to handle the `useSearchParams` hook.
 export default function WordExpansionPageWrapper() {
   return (
-    <React.Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div>Loading...</div>}>
       <WordExpansionContent />
-    </React.Suspense>
+    </Suspense>
   );
 }
