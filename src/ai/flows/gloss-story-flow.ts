@@ -68,7 +68,7 @@ const glossStoryFlow = ai.defineFlow(
         }
 
         // Determine which words were missed by the AI and need to be retried
-        wordsToGloss = wordsToGloss.filter(word => !result.hasOwnProperty(word.toLowerCase()));
+        wordsToGloss = wordsToGloss.filter(word => !result.hasOwnProperty(word.toLowerCase().replace(/[.,·;]/g, '')));
 
       } catch (error) {
         console.error(`An error occurred during a batch gloss attempt (retry ${retries + 1}):`, error);
