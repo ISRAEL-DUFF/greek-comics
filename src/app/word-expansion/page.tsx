@@ -22,7 +22,7 @@ import { MarkdownDisplay } from '@/components/markdown-display';
 import { MarkdownEditor } from '@/components/markdown-editor';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WordSearchModal } from './components/word-search-modal';
-import { Input } from '@/components/ui/input';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function WordExpansionPage() {
   const [words, setWords] = useState('');
@@ -33,7 +33,6 @@ export default function WordExpansionPage() {
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   
   const [allExpandedWords, setAllExpandedWords] = useState<ExpandedWordListItem[]>([]);
-  const [historyFilter, setHistoryFilter] = useState('');
   const [currentWord, setCurrentWord] = useState<ExpandedWord | null>(null);
 
   const [isEditMode, setIsEditMode] = useState(false);
@@ -54,14 +53,28 @@ export default function WordExpansionPage() {
     fetchExpandedWords();
   }, []);
   
-  const filteredWords = useMemo(() => {
-    if (!historyFilter) {
-      return allExpandedWords;
-    }
-    return allExpandedWords.filter(item =>
-      item.word.toLowerCase().includes(historyFilter.toLowerCase())
+  const groupedAndSortedWords = useMemo(() => {
+    if (!allExpandedWords) return {};
+
+    const grouped = allExpandedWords.reduce((acc, wordItem) => {
+        if (!wordItem.word) return acc;
+        const firstLetter = wordItem.word.charAt(0).toUpperCase();
+        if (!acc[firstLetter]) {
+            acc[firstLetter] = [];
+        }
+        acc[firstLetter].push(wordItem);
+        return acc;
+    }, {} as Record<string, ExpandedWordListItem[]>);
+    
+    // Sort words within each group and sort the groups by letter
+    Object.keys(grouped).forEach(letter => {
+        grouped[letter].sort((a, b) => a.word.localeCompare(b.word));
+    });
+
+    return Object.fromEntries(
+        Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b))
     );
-  }, [allExpandedWords, historyFilter]);
+  }, [allExpandedWords]);
 
   const handleSelectWord = async (item: ExpandedWordListItem) => {
     setIsLoadingContent(true);
@@ -196,40 +209,40 @@ export default function WordExpansionPage() {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Filter history..."
-                          value={historyFilter}
-                          onChange={(e) => setHistoryFilter(e.target.value)}
-                          className="pl-9"
-                        />
-                      </div>
-                      <ScrollArea className="h-80">
+                  <CardContent>
+                      <ScrollArea className="h-96">
                           {isLoadingList ? (
                               <div className="space-y-2 pr-4">
                                   {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                               </div>
-                          ) : filteredWords.length > 0 ? (
-                              <div className="space-y-2 pr-4">
-                                  {filteredWords.map((item) => (
-                                  <Button
-                                      key={item.id}
-                                      variant={currentWord?.id === item.id ? 'secondary' : 'ghost'}
-                                      className={cn(
-                                          'w-full justify-start h-auto py-2 px-3 text-left font-body text-base',
-                                          currentWord?.id === item.id && 'bg-accent/20'
-                                      )}
-                                      onClick={() => handleSelectWord(item)}
-                                  >
-                                      {item.word}
-                                  </Button>
-                                  ))}
-                              </div>
+                          ) : Object.keys(groupedAndSortedWords).length > 0 ? (
+                              <Accordion type="multiple" className="w-full pr-4">
+                                {Object.entries(groupedAndSortedWords).map(([letter, words]) => (
+                                    <AccordionItem value={letter} key={letter}>
+                                        <AccordionTrigger className="font-headline text-lg">{letter}</AccordionTrigger>
+                                        <AccordionContent>
+                                            <div className="space-y-1 pl-2">
+                                                {words.map((item) => (
+                                                    <Button
+                                                        key={item.id}
+                                                        variant={currentWord?.id === item.id ? 'secondary' : 'ghost'}
+                                                        className={cn(
+                                                            'w-full justify-start h-auto py-1.5 px-2 text-left font-body text-base font-normal',
+                                                            currentWord?.id === item.id && 'bg-accent/20'
+                                                        )}
+                                                        onClick={() => handleSelectWord(item)}
+                                                    >
+                                                        {item.word}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                            </Accordion>
                           ) : (
                               <div className="text-center text-muted-foreground p-4 text-sm h-full flex items-center justify-center">
-                                  {allExpandedWords.length > 0 ? <p>No words match your filter.</p> : <p>No words expanded yet.</p>}
+                                  <p>No words expanded yet.</p>
                               </div>
                           )}
                       </ScrollArea>
