@@ -12,7 +12,7 @@ import {
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Sparkles, Wand2, Edit, Save, Search } from 'lucide-react';
@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { WordSearchModal } from './components/word-search-modal';
 
 export default function WordExpansionPage() {
-  const [word, setWord] = useState('');
+  const [words, setWords] = useState('');
   const [isGenerating, startGeneratingTransition] = useTransition();
   const [isSaving, startSavingTransition] = useTransition();
   
@@ -71,13 +71,13 @@ export default function WordExpansionPage() {
 
   const handleGenerateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!word.trim()) return;
+    if (!words.trim()) return;
 
     startGeneratingTransition(async () => {
       setCurrentWord(null);
       setIsEditMode(false);
       setIsLoadingContent(true);
-      const result = await generateAndSaveWordExpansionAction(word);
+      const result = await generateAndSaveWordExpansionAction(words);
       setIsLoadingContent(false);
 
       if (result.error) {
@@ -87,15 +87,17 @@ export default function WordExpansionPage() {
           description: result.error,
         });
         setCurrentWord(null);
-      } else {
+      } else if (result.data && result.data.length > 0) {
+        const lastWord = result.data[result.data.length - 1];
         toast({
           title: 'Expansion Complete',
-          description: `Successfully generated details for "${result.data?.word}".`,
+          description: `Successfully generated details for ${result.data.length} word(s).`,
         });
-        setCurrentWord(result.data!);
-        setEditedContent(result.data!.expansion);
-        setWord('');
-        fetchExpandedWords();
+        // Select and display the last successfully generated word
+        setCurrentWord(lastWord); 
+        setEditedContent(lastWord.expansion);
+        setWords(''); // Clear input on success
+        fetchExpandedWords(); // Refresh the history list
       }
     });
   };
@@ -149,21 +151,21 @@ export default function WordExpansionPage() {
               <div className="sticky top-24 space-y-8">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Expand a Word</CardTitle>
-                    <CardDescription>Enter a Greek word to analyze.</CardDescription>
+                    <CardTitle>Expand Word(s)</CardTitle>
+                    <CardDescription>Enter Greek words, comma-separated.</CardDescription>
                   </CardHeader>
                   <form onSubmit={handleGenerateSubmit}>
                     <CardContent>
-                      <Input
-                        placeholder="e.g., λόγος"
-                        value={word}
-                        onChange={(e) => setWord(e.target.value)}
+                      <Textarea
+                        placeholder="e.g., λόγος, ἀγαθός, λύω"
+                        value={words}
+                        onChange={(e) => setWords(e.target.value)}
                         disabled={isGenerating}
-                        className="font-body text-lg"
+                        className="font-body text-base min-h-[60px]"
                       />
                     </CardContent>
                     <CardFooter>
-                      <Button type="submit" disabled={isGenerating || !word.trim()} className="w-full">
+                      <Button type="submit" disabled={isGenerating || !words.trim()} className="w-full">
                         {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                         {isGenerating ? 'Generating...' : 'Generate'}
                       </Button>

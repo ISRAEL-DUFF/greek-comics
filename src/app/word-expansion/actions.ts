@@ -17,7 +17,7 @@ export type ExpandedWord = {
 export type ExpandedWordListItem = Pick<ExpandedWord, 'id' | 'word'>;
 
 type GenerateResult = {
-    data?: ExpandedWord;
+    data?: ExpandedWord[];
     error?: string;
 };
 
@@ -26,43 +26,66 @@ type UpdateResult = {
     error?: string;
 }
 
-// Action to generate, save, and return a word expansion
-export async function generateAndSaveWordExpansionAction(word: string): Promise<GenerateResult> {
-  if (!word) {
-    return { error: 'Word cannot be empty.' };
+// Action to generate, save, and return a word expansion for one or more words.
+export async function generateAndSaveWordExpansionAction(words: string): Promise<GenerateResult> {
+  if (!words) {
+    return { error: 'Word(s) cannot be empty.' };
   }
 
   if (!supabase) {
     return { error: 'Supabase is not configured. Cannot save word.' };
   }
 
+  // Split the input string by commas, trim whitespace, and filter out empty strings.
+  const wordList = words.split(',').map(w => w.trim()).filter(Boolean);
+  if (wordList.length === 0) {
+    return { error: 'No valid words provided.' };
+  }
+
+  const generatedWords: ExpandedWord[] = [];
+
   try {
-    // 1. Generate the expansion
-    const { expansion } = await expandWord({ word });
+    for (const word of wordList) {
+        // 1. Generate the expansion for the current word
+        const { expansion } = await expandWord({ word });
 
-    if (!expansion) {
-      return { error: 'Failed to generate expansion from AI.' };
+        if (!expansion) {
+            // We can decide to either stop or continue. Let's continue and report at the end.
+            console.warn(`Failed to generate expansion for "${word}".`);
+            continue; // Skip to the next word
+        }
+        
+        // 2. Save to Supabase
+        const { data, error } = await supabase
+            .from(EXPANDED_WORDS_TABLE)
+            .insert({ word: word.toLowerCase(), expansion })
+            .select()
+            .single();
+
+        if (error) {
+            console.error(`Error saving expanded word "${word}":`, error);
+            // In a multi-word scenario, we might want to continue and report failures later.
+            // For now, we'll stop on the first DB error.
+            return { error: `Database error for "${word}": ${error.message}` };
+        }
+        
+        if (data) {
+            generatedWords.push(data);
+        }
     }
-    
-    // 2. Save to Supabase
-    const { data, error } = await supabase
-      .from(EXPANDED_WORDS_TABLE)
-      .insert({ word: word.toLowerCase(), expansion })
-      .select()
-      .single();
 
-    if (error) {
-      console.error('Error saving expanded word:', error);
-      return { error: `Database error: ${error.message}` };
+    if (generatedWords.length === 0) {
+      return { error: 'Could not generate an expansion for any of the provided words.' };
     }
 
-    return { data };
+    return { data: generatedWords };
 
   } catch (error: any) {
     console.error('Error in generateAndSaveWordExpansionAction:', error);
     return { error: 'An unexpected error occurred during word expansion.' };
   }
 }
+
 
 // Action to update an existing word expansion
 export async function updateWordExpansionAction(id: number, newExpansion: string): Promise<UpdateResult> {
