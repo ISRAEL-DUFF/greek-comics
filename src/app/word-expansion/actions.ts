@@ -101,7 +101,6 @@ export async function getExpandedWordsAction(): Promise<ExpandedWordListItem[]> 
       .from(EXPANDED_WORDS_TABLE)
       .select('id, word')
       .not('word', 'eq', '') // Filter out rows where word is an empty string
-      .eq('language', 'greek')
       .order('word', { ascending: true });
 
     if (error) {
@@ -136,4 +135,32 @@ export async function getExpandedWordByIdAction(id: number): Promise<ExpandedWor
       console.error(`Error in getExpandedWordByIdAction for id ${id}:`, error);
       return null;
     }
+}
+
+// Action to search for words within the expansion content
+export async function searchExpandedWordsAction(searchTerm: string): Promise<ExpandedWordListItem[]> {
+  if (!supabase) {
+    return [];
   }
+  if (!searchTerm) {
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from(EXPANDED_WORDS_TABLE)
+      .select('id, word')
+      .ilike('expansion', `%${searchTerm}%`) // Case-insensitive search
+      .not('word', 'eq', '')
+      .order('word', { ascending: true });
+
+    if (error) {
+      console.error('Error searching expanded words:', error);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    console.error('Error in searchExpandedWordsAction:', error);
+    return [];
+  }
+}
