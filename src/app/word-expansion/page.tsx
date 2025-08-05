@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useMemo } from 'react';
 import {
   getExpandedWordsAction,
   getExpandedWordByIdAction,
@@ -22,6 +22,7 @@ import { MarkdownDisplay } from '@/components/markdown-display';
 import { MarkdownEditor } from '@/components/markdown-editor';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WordSearchModal } from './components/word-search-modal';
+import { Input } from '@/components/ui/input';
 
 export default function WordExpansionPage() {
   const [words, setWords] = useState('');
@@ -31,7 +32,8 @@ export default function WordExpansionPage() {
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   
-  const [expandedWords, setExpandedWords] = useState<ExpandedWordListItem[]>([]);
+  const [allExpandedWords, setAllExpandedWords] = useState<ExpandedWordListItem[]>([]);
+  const [historyFilter, setHistoryFilter] = useState('');
   const [currentWord, setCurrentWord] = useState<ExpandedWord | null>(null);
 
   const [isEditMode, setIsEditMode] = useState(false);
@@ -44,13 +46,22 @@ export default function WordExpansionPage() {
   const fetchExpandedWords = async () => {
     setIsLoadingList(true);
     const words = await getExpandedWordsAction();
-    setExpandedWords(words);
+    setAllExpandedWords(words);
     setIsLoadingList(false);
   };
 
   useEffect(() => {
     fetchExpandedWords();
   }, []);
+  
+  const filteredWords = useMemo(() => {
+    if (!historyFilter) {
+      return allExpandedWords;
+    }
+    return allExpandedWords.filter(item =>
+      item.word.toLowerCase().includes(historyFilter.toLowerCase())
+    );
+  }, [allExpandedWords, historyFilter]);
 
   const handleSelectWord = async (item: ExpandedWordListItem) => {
     setIsLoadingContent(true);
@@ -179,21 +190,30 @@ export default function WordExpansionPage() {
                         <CardTitle>History</CardTitle>
                         <CardDescription>Previously expanded words.</CardDescription>
                       </div>
-                      <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)}>
+                      <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)} aria-label="Search within expansions">
                         <Search className="h-4 w-4" />
                         <span className="sr-only">Search Expansions</span>
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                      <ScrollArea className="h-96">
+                  <CardContent className="space-y-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Filter history..."
+                          value={historyFilter}
+                          onChange={(e) => setHistoryFilter(e.target.value)}
+                          className="pl-9"
+                        />
+                      </div>
+                      <ScrollArea className="h-80">
                           {isLoadingList ? (
                               <div className="space-y-2 pr-4">
                                   {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                               </div>
-                          ) : expandedWords.length > 0 ? (
+                          ) : filteredWords.length > 0 ? (
                               <div className="space-y-2 pr-4">
-                                  {expandedWords.map((item) => (
+                                  {filteredWords.map((item) => (
                                   <Button
                                       key={item.id}
                                       variant={currentWord?.id === item.id ? 'secondary' : 'ghost'}
@@ -208,8 +228,8 @@ export default function WordExpansionPage() {
                                   ))}
                               </div>
                           ) : (
-                              <div className="text-center text-muted-foreground p-4 text-sm">
-                                  No words expanded yet.
+                              <div className="text-center text-muted-foreground p-4 text-sm h-full flex items-center justify-center">
+                                  {allExpandedWords.length > 0 ? <p>No words match your filter.</p> : <p>No words expanded yet.</p>}
                               </div>
                           )}
                       </ScrollArea>
