@@ -12,6 +12,7 @@ export type ExpandedWord = {
     created_at: string;
     word: string;
     expansion: string; // Markdown content
+    language: string;
 };
 
 export type ExpandedWordListItem = Pick<ExpandedWord, 'id' | 'word'>;
@@ -58,7 +59,7 @@ export async function generateAndSaveWordExpansionAction(words: string): Promise
         // 2. Save to Supabase
         const { data, error } = await supabase
             .from(EXPANDED_WORDS_TABLE)
-            .insert({ word: word.toLowerCase(), expansion })
+            .insert({ word: word.toLowerCase(), expansion, language: 'greek' })
             .select()
             .single();
 
@@ -123,6 +124,7 @@ export async function getExpandedWordsAction(): Promise<ExpandedWordListItem[]> 
     const { data, error } = await supabase
       .from(EXPANDED_WORDS_TABLE)
       .select('id, word')
+      .eq('language', 'greek')
       .not('word', 'eq', '') // Filter out rows where word is an empty string
       .order('word', { ascending: true });
 
@@ -173,6 +175,7 @@ export async function searchExpandedWordsAction(searchTerm: string): Promise<Exp
     const { data, error } = await supabase
       .from(EXPANDED_WORDS_TABLE)
       .select('id, word')
+      .eq('language', 'greek')
       .ilike('expansion', `%${searchTerm}%`) // Case-insensitive search
       .not('word', 'eq', '')
       .order('word', { ascending: true });
