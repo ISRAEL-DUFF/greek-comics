@@ -25,6 +25,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { WordSearchModal } from './components/word-search-modal';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
+const greekNormalization = {
+  normalizeGreek: (lemma: string) =>{
+    return lemma
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^\p{Script=Greek}]/gu, "")
+      .toLowerCase();
+  },
+
+  normalizeLemma(lemma: string) {
+    return lemma.replace(/\d+$/, '');
+  }
+}
+
 function WordExpansionContent() {
   const searchParams = useSearchParams();
   const wordFromUrl = searchParams.get('word');
@@ -100,7 +114,8 @@ function WordExpansionContent() {
 
     const grouped = allExpandedWords.reduce((acc, wordItem) => {
         if (!wordItem.word) return acc;
-        const firstLetter = wordItem.word.charAt(0).toUpperCase();
+        const word = greekNormalization.normalizeGreek(wordItem.word);
+        const firstLetter = word.charAt(0).toUpperCase();
         if (!acc[firstLetter]) {
             acc[firstLetter] = [];
         }
