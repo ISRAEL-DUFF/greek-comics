@@ -1,7 +1,8 @@
 
 'use client';
 
-import { useState, useEffect, useTransition, useMemo } from 'react';
+import React, { useState, useEffect, useTransition, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   getExpandedWordsAction,
   getExpandedWordByIdAction,
@@ -24,7 +25,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { WordSearchModal } from './components/word-search-modal';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
-export default function WordExpansionPage() {
+function WordExpansionContent() {
+  const searchParams = useSearchParams();
+  const wordFromUrl = searchParams.get('word');
+
   const [words, setWords] = useState('');
   const [isGenerating, startGeneratingTransition] = useTransition();
   const [isSaving, startSavingTransition] = useTransition();
@@ -48,10 +52,48 @@ export default function WordExpansionPage() {
     setAllExpandedWords(words);
     setIsLoadingList(false);
   };
+  
+  const handleGenerate = async (wordsToExpand: string) => {
+    if (!wordsToExpand.trim()) return;
+
+    startGeneratingTransition(async () => {
+      setCurrentWord(null);
+      setIsEditMode(false);
+      setIsLoadingContent(true);
+      const result = await generateAndSaveWordExpansionAction(wordsToExpand);
+      setIsLoadingContent(false);
+
+      if (result.error) {
+        toast({
+          variant: 'destructive',
+          title: 'Expansion Failed',
+          description: result.error,
+        });
+        setCurrentWord(null);
+      } else if (result.data && result.data.length > 0) {
+        const lastWord = result.data[result.data.length - 1];
+        toast({
+          title: 'Expansion Complete',
+          description: `Successfully generated details for ${result.data.length} word(s).`,
+        });
+        // Select and display the last successfully generated word
+        setCurrentWord(lastWord); 
+        setEditedContent(lastWord.expansion);
+        setWords(''); // Clear input on success
+        fetchExpandedWords(); // Refresh the history list
+      }
+    });
+  };
 
   useEffect(() => {
     fetchExpandedWords();
-  }, []);
+    // If a word is passed in the URL, set it in the input and trigger generation.
+    if (wordFromUrl) {
+      setWords(wordFromUrl);
+      // We wrap this in a timeout to ensure the state has updated before we call handleGenerate.
+      setTimeout(() => handleGenerate(wordFromUrl), 0);
+    }
+  }, [wordFromUrl]);
   
   const groupedAndSortedWords = useMemo(() => {
     if (!allExpandedWords) return {};
@@ -95,35 +137,7 @@ export default function WordExpansionPage() {
 
   const handleGenerateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!words.trim()) return;
-
-    startGeneratingTransition(async () => {
-      setCurrentWord(null);
-      setIsEditMode(false);
-      setIsLoadingContent(true);
-      const result = await generateAndSaveWordExpansionAction(words);
-      setIsLoadingContent(false);
-
-      if (result.error) {
-        toast({
-          variant: 'destructive',
-          title: 'Expansion Failed',
-          description: result.error,
-        });
-        setCurrentWord(null);
-      } else if (result.data && result.data.length > 0) {
-        const lastWord = result.data[result.data.length - 1];
-        toast({
-          title: 'Expansion Complete',
-          description: `Successfully generated details for ${result.data.length} word(s).`,
-        });
-        // Select and display the last successfully generated word
-        setCurrentWord(lastWord); 
-        setEditedContent(lastWord.expansion);
-        setWords(''); // Clear input on success
-        fetchExpandedWords(); // Refresh the history list
-      }
-    });
+    handleGenerate(words);
   };
 
   const handleSaveChanges = () => {
@@ -316,5 +330,15 @@ export default function WordExpansionPage() {
         </main>
       </div>
     </>
+  );
+}
+
+
+// The page needs to be wrapped in a Suspense boundary to handle the `useSearchParams` hook.
+export default function WordExpansionPageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <WordExpansionContent />
+    </Suspense>
   );
 }

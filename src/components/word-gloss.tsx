@@ -8,7 +8,9 @@ import {
 import type { GlossStoryOutput, Word } from '@/app/actions';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
-import { MessageSquareQuote } from 'lucide-react';
+import { MessageSquareQuote, ExternalLink } from 'lucide-react';
+import { Button } from './ui/button';
+import Link from 'next/link';
 
 interface WordGlossProps {
   wordObj: Word;
@@ -65,6 +67,13 @@ export function WordGloss({ wordObj, glosses }: WordGlossProps) {
                     </div>
                 </>
             )}
+            <Separator className="my-2" />
+            <Button asChild size="sm" className="w-full">
+              <Link href={`/word-expansion?word=${encodeURIComponent(mainWord)}`} target="_blank">
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Expand Word
+              </Link>
+            </Button>
           </div>
         </PopoverContent>
       </Popover>
