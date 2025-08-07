@@ -295,7 +295,7 @@ function WordExpansionContent() {
                           </Button>
                       )}
                   </CardHeader>
-                  <CardContent className="p-2 md:p-6 h-full">
+                  <CardContent className="p-2 md:p-6 h-full overflow-x-auto">
                       {isLoading ? (
                           <div className="space-y-4 pt-6">
                               <Skeleton className="h-8 w-1/4" />

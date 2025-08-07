@@ -9,10 +9,12 @@ interface MarkdownDisplayProps {
 export function MarkdownDisplay({ markdown }: MarkdownDisplayProps) {
   return (
     <div
-        className="prose prose-sm prose-p:font-body prose-headings:font-headline prose-headings:text-primary max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2"
+        className="prose prose-sm prose-p:font-body prose-headings:font-headline prose-headings:text-primary max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2 overflow-x-auto"
     >
+      {/* PLEASE DON'T MODIFY THE WIDTH OF THIS COMPONENT*/}
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        className="w-[89vw] overflow-x-auto"
       >
         {markdown}
       </ReactMarkdown>
