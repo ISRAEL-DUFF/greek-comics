@@ -18,6 +18,7 @@ interface NoteEditorProps {
 }
 
 export function NoteEditor({ note, isLoading }: NoteEditorProps) {
+  console.log('PAGE LOADS...')
   const [title, setTitle] = useState(note?.title || '');
   const [content, setContent] = useState(note?.content || '');
   const [tags, setTags] = useState<string[]>(note?.tags || []);
@@ -50,6 +51,8 @@ export function NoteEditor({ note, isLoading }: NoteEditorProps) {
           title: title,
           content: content,
           tags: tags,
+        }).then(() => {
+          setIsEditMode(true);
         });
       });
   }
@@ -64,6 +67,7 @@ export function NoteEditor({ note, isLoading }: NoteEditorProps) {
         JSON.stringify(debouncedTags) !== JSON.stringify(note.tags))
     ) {
       handleAutoSaveChanges();
+      console.log('Auto saving...')
     }
   }, [debouncedContent, debouncedTitle, debouncedTags, note, isEditMode]);
 
@@ -204,12 +208,12 @@ export function NoteEditor({ note, isLoading }: NoteEditorProps) {
       )}
 
 
-      <div className="flex-grow h-full min-h-0">
+      <div className="flex-grow h-full min-h-0 md:w-[82vw] overflow-x-auto">
          {isEditMode ? (
-            <MarkdownEditor value={content} onChange={(value) => setContent(value || '')} />
+            <MarkdownEditor className='w-[82vw] overflow-x-auto' value={content} onChange={(value) => setContent(value || '')} />
          ) : (
             <div className="p-1 h-full prose-sm prose-p:font-body max-w-none">
-              <MarkdownDisplay markdown={content} />
+              <MarkdownDisplay className="w-[82vw] overflow-x-auto" markdown={content} />
             </div>
          )}
       </div>

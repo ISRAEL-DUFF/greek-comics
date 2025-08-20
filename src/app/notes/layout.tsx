@@ -8,6 +8,7 @@ import {
   SidebarTrigger,
   SidebarProvider
 } from '@/components/ui/sidebar';
+import './notes.css'
 
 export default async function NotesLayout({
   children,
@@ -19,7 +20,7 @@ export default async function NotesLayout({
   return (
     <SidebarProvider>
       <Sidebar side="left" collapsible="icon" className="border-r">
-        <SidebarContent className='bg-background text-foreground'>
+        <SidebarContent className='text-foreground'>
           <NoteList notes={notes} />
         </SidebarContent>
       </Sidebar>
@@ -28,7 +29,7 @@ export default async function NotesLayout({
           <SidebarTrigger className="md:hidden" />
           {/* Add header actions here */}
         </header>
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto notes-background">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );
