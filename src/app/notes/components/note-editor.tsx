@@ -18,7 +18,6 @@ interface NoteEditorProps {
 }
 
 export function NoteEditor({ note, isLoading }: NoteEditorProps) {
-  console.log('PAGE LOADS...')
   const [title, setTitle] = useState(note?.title || '');
   const [content, setContent] = useState(note?.content || '');
   const [tags, setTags] = useState<string[]>(note?.tags || []);
@@ -39,7 +38,7 @@ export function NoteEditor({ note, isLoading }: NoteEditorProps) {
       setContent(note.content || '');
       setTags(note.tags || []);
       // When a new note is selected, exit edit mode
-      setIsEditMode(false); 
+      // setIsEditMode(false); 
     }
   }, [note]);
   
@@ -213,7 +212,7 @@ export function NoteEditor({ note, isLoading }: NoteEditorProps) {
             <MarkdownEditor className='w-[82vw] overflow-x-auto' value={content} onChange={(value) => setContent(value || '')} />
          ) : (
             <div className="p-1 h-full prose-sm prose-p:font-body max-w-none">
-              <MarkdownDisplay className="w-[82vw] overflow-x-auto" markdown={content} />
+              <MarkdownDisplay markdown={content} className="w-[82vw] overflow-x-auto" markdownClassName = "prose prose-sm prose-p:font-body prose-headings:font-headline max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2 overflow-x-auto" />
             </div>
          )}
       </div>
