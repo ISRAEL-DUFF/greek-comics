@@ -326,9 +326,9 @@ function WordExpansionContent() {
                                   </div>
                               </div>
                           ) : (
-                              <div>
+                              <div className="md:w-[64vw] w-[89vw]">
                                 {/* PLEASE DON'T MODIFY THE WIDTH OF THE PARENT COMPONENT OF THIS VIEWER*/}
-                                <MarkdownDisplay markdown={currentWord.expansion} className="md:w-[63vw] overflow-x-auto" />
+                                <MarkdownDisplay markdown={currentWord.expansion} className="w-[98%] overflow-x-auto" />
                               </div>
                           )
                       ) : (
