@@ -15,9 +15,10 @@ const Editor = dynamic(
 interface MarkdownEditorProps {
     value: string;
     onChange: (value: string | undefined) => void;
+    className: string;
 }
 
-export function MarkdownEditor({ value, onChange }: MarkdownEditorProps) {
+export function MarkdownEditor({ value, onChange, className }: MarkdownEditorProps) {
     const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
@@ -37,6 +38,8 @@ export function MarkdownEditor({ value, onChange }: MarkdownEditorProps) {
                 onChange={onChange}
                 height={500}
                 preview="live"
+                //className='w-[89vw] overflow-x-auto'
+                className={className}
             />
         </div>
     );

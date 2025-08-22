@@ -310,6 +310,7 @@ function WordExpansionContent() {
                           isEditMode ? (
                               <div className="space-y-4">
                                   <MarkdownEditor
+                                      className='w-[89vw] overflow-x-auto'
                                       value={editedContent}
                                       onChange={(value) => setEditedContent(value || '')}
                                   />
@@ -325,7 +326,10 @@ function WordExpansionContent() {
                                   </div>
                               </div>
                           ) : (
-                              <MarkdownDisplay markdown={currentWord.expansion} />
+                              <div className="md:w-[64vw] w-[89vw]">
+                                {/* PLEASE DON'T MODIFY THE WIDTH OF THE PARENT COMPONENT OF THIS VIEWER*/}
+                                <MarkdownDisplay markdown={currentWord.expansion} className="w-[98%] overflow-x-auto" />
+                              </div>
                           )
                       ) : (
                           <div className="flex flex-col items-center justify-center p-8 text-center h-full">

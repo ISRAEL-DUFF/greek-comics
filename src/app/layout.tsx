@@ -26,6 +26,11 @@ export default function RootLayout({
             Word Expansion Tool
           </Link>
         </div>
+        <div className="absolute top-4 right-48 z-20 no-print">
+          <Link href="/notes" className="text-sm text-muted-foreground hover:text-primary underline">
+            Notes
+          </Link>
+        </div>
         {children}
         <Toaster />
       </body>
