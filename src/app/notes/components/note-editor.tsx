@@ -66,11 +66,8 @@ export function NoteEditor({ note, isLoading }: NoteEditorProps) {
         debouncedTitle !== note.title ||
         JSON.stringify(debouncedTags) !== JSON.stringify(note.tags))
     ) {
-      handleAutoSaveChanges();
-      // setTimeout(() => {
-      //   if(isSaving) return;
-      //   handleAutoSaveChanges();
-      // }, 3000)
+      // Disable auto save for now
+      // handleAutoSaveChanges();
       console.log('Auto saving...')
     }
   }, [debouncedContent, debouncedTitle, debouncedTags, note, isEditMode]);
