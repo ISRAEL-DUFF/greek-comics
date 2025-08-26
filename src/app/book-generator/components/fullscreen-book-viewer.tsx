@@ -18,9 +18,16 @@ import { X } from 'lucide-react';
 interface FullscreenBookViewerProps {
   bookData: BookData;
   onExitFullscreen: () => void;
+  showImages: boolean;
+  showTranslation: boolean;
 }
 
-export function FullscreenBookViewer({ bookData, onExitFullscreen }: FullscreenBookViewerProps) {
+export function FullscreenBookViewer({ 
+    bookData, 
+    onExitFullscreen, 
+    showImages, 
+    showTranslation 
+}: FullscreenBookViewerProps) {
   const { title, author, pages, coverIllustrationUri } = bookData;
 
   return (
@@ -62,27 +69,29 @@ export function FullscreenBookViewer({ bookData, onExitFullscreen }: FullscreenB
                                 <div className="flex-grow space-y-8">
                                     {page.title && <h2 className="text-2xl font-bold font-headline text-primary mb-6 text-center">{page.title}</h2>}
                                     
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
-                                        {page.mainIllustrations.map((illustration, imgIndex) => (
-                                            <div key={imgIndex} className="aspect-video w-full relative bg-gray-700 rounded-md flex items-center justify-center">
-                                                {illustration.illustrationUri && (
-                                                    <Image
-                                                        src={illustration.illustrationUri}
-                                                        alt={illustration.prompt}
-                                                        layout="fill"
-                                                        className="rounded-md object-cover"
-                                                        unoptimized
-                                                    />
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                                    {showImages && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+                                            {page.mainIllustrations.map((illustration, imgIndex) => (
+                                                <div key={imgIndex} className="aspect-video w-full relative bg-gray-700 rounded-md flex items-center justify-center">
+                                                    {illustration.illustrationUri && (
+                                                        <Image
+                                                            src={illustration.illustrationUri}
+                                                            alt={illustration.prompt}
+                                                            layout="fill"
+                                                            className="rounded-md object-cover"
+                                                            unoptimized
+                                                        />
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
 
                                     <div className="space-y-6">
                                         {page.paragraphs.map((p, pIndex) => (
-                                            <div key={pIndex} className="mb-6">
+                                            <div key={pIndex} className="mb-6 last:mb-0">
                                                 <p className="text-xl lg:text-2xl leading-relaxed font-body lang-grc">{p.text}</p>
-                                                <p className="text-base italic text-gray-400 mt-2">{p.translation}</p>
+                                                {showTranslation && <p className="text-base italic text-gray-400 mt-2">{p.translation}</p>}
                                             </div>
                                         ))}
                                     </div>
