@@ -6,11 +6,14 @@ import { BookGeneratorForm } from './components/book-generator-form';
 import { BookDisplay } from './components/book-display';
 import { SavedBooksList } from './components/saved-books-list';
 import type { BookResult, BookData } from './actions';
+import { FullscreenBookViewer } from './components/fullscreen-book-viewer';
 
 export default function BookGeneratorPage() {
   const [bookResult, setBookResult] = useState<BookResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
 
   const handleBookGenerated = (result: BookResult | null) => {
     if(result) {
@@ -30,6 +33,15 @@ export default function BookGeneratorPage() {
     setIsLoadingSaved(true);
     setBookResult(null);
   };
+
+  if (isFullscreen && bookResult?.data) {
+    return (
+        <FullscreenBookViewer 
+            bookData={bookResult.data}
+            onExitFullscreen={() => setIsFullscreen(false)}
+        />
+    );
+  }
 
 
   return (
@@ -57,6 +69,7 @@ export default function BookGeneratorPage() {
             <BookDisplay
               bookResult={bookResult} 
               isLoading={isLoading || isLoadingSaved}
+              onEnterFullscreen={() => setIsFullscreen(true)}
             />
           </div>
         </div>
