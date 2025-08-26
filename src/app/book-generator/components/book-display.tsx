@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { FootnoteImageModal } from './footnote-image-modal';
-import type { BookData, Paragraph } from '../actions';
+import type { BookData } from '../actions';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
