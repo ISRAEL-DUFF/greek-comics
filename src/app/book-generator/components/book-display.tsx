@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Download, FileJson, ImagePlus, Image as ImageIcon } from 'lucide-react';
+import { AlertCircle, BookOpen, Download, FileJson, ImagePlus, Image as ImageIcon, Languages, Maximize, MessageSquareQuote, WholeWord } from 'lucide-react';
 import type { BookResult } from '../actions';
 import {
   Carousel,
@@ -21,10 +21,21 @@ import { FootnoteImageModal } from './footnote-image-modal';
 import type { BookData } from '../actions';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 interface BookDisplayProps {
   bookResult: BookResult | null;
   isLoading: boolean;
+  onEnterFullscreen: () => void;
 }
 
 type ModalState = {
@@ -36,10 +47,12 @@ type ModalState = {
     isMainIllustration?: boolean;
 }
 
-export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
+export function BookDisplay({ bookResult, isLoading, onEnterFullscreen }: BookDisplayProps) {
   const { toast } = useToast();
   const [currentBook, setCurrentBook] = useState<BookData | null>(bookResult?.data || null);
   const [showImages, setShowImages] = useState(true);
+  const [showTranslation, setShowTranslation] = useState(true);
+  const [showSyntax, setShowSyntax] = useState(false);
   
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
@@ -157,24 +170,31 @@ export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
       />
       <div className="space-y-8">
           <div className="no-print flex justify-end gap-4 flex-wrap items-center">
-                <div className="flex items-center space-x-2 mr-auto">
-                    <Switch
-                        id="show-images"
-                        checked={showImages}
-                        onCheckedChange={setShowImages}
-                    />
-                    <Label htmlFor="show-images" className="flex items-center gap-2 text-sm">
-                        <ImageIcon className="h-4 w-4" />
-                        Show Illustrations
-                    </Label>
+                <div className="flex items-center space-x-2 mr-auto flex-wrap gap-y-2">
+                    <div className="flex items-center space-x-2">
+                        <Switch id="show-images" checked={showImages} onCheckedChange={setShowImages} />
+                        <Label htmlFor="show-images" className="flex items-center gap-2 text-sm"><ImageIcon className="h-4 w-4" />Illustrations</Label>
+                    </div>
+                     <div className="flex items-center space-x-2">
+                        <Switch id="show-translation" checked={showTranslation} onCheckedChange={setShowTranslation} />
+                        <Label htmlFor="show-translation" className="flex items-center gap-2 text-sm"><Languages className="h-4 w-4" />Translation</Label>
+                    </div>
+                     <div className="flex items-center space-x-2">
+                        <Switch id="show-syntax" checked={showSyntax} onCheckedChange={setShowSyntax} />
+                        <Label htmlFor="show-syntax" className="flex items-center gap-2 text-sm"><WholeWord className="h-4 w-4" />Analysis</Label>
+                    </div>
                 </div>
               <Button variant="outline" onClick={handleExportJson}>
                   <FileJson className="mr-2 h-4 w-4" />
-                  Export JSON
+                  Export
               </Button>
               <Button variant="outline" onClick={() => window.print()}>
                   <Download className="mr-2 h-4 w-4" />
-                  Download PDF
+                  PDF
+              </Button>
+               <Button variant="outline" onClick={onEnterFullscreen}>
+                  <Maximize className="mr-2 h-4 w-4" />
+                  Fullscreen
               </Button>
           </div>
 
@@ -212,7 +232,7 @@ export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
                                       {page.title && <h2 className="text-2xl font-bold font-headline text-primary mb-6 text-center">{page.title}</h2>}
                                       
                                         {showImages && (
-                                            <div className="grid grid-cols-2 gap-4 my-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
                                                 {page.mainIllustrations.map((illustration, imgIndex) => (
                                                     <div key={imgIndex} className="aspect-video w-full relative bg-muted rounded-md flex items-center justify-center">
                                                         {illustration.illustrationUri ? (
@@ -235,10 +255,10 @@ export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
 
                                       <div className="space-y-6">
                                           {page.paragraphs.map((p, pIndex) => (
-                                              <div key={pIndex}>
+                                              <div key={pIndex} className="mb-6">
                                                   <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">{p.text}</p>
 
-                                                  <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>
+                                                  {showTranslation && <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>}
                                               </div>
                                           ))}
                                       </div>
