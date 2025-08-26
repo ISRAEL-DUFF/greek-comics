@@ -198,7 +198,7 @@ export function BookDisplay({ bookResult, isLoading, onEnterFullscreen }: BookDi
               </Button>
           </div>
 
-          <Carousel className="w-full" opts={{ loop: false }}>
+          <Carousel className="lg:w-full w-[90vw]" opts={{ loop: false }}>
               <CarouselContent>
                   {/* Cover Page */}
                   <CarouselItem>
