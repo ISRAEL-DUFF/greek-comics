@@ -2,6 +2,8 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import Link from 'next/link';
+import { Home, Book, MessageSquare, StickyNote } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
   title: 'Hellenika Komiks',
@@ -21,16 +23,40 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <div className="absolute top-4 right-4 z-20 no-print">
-          <Link href="/word-expansion" className="text-sm text-muted-foreground hover:text-primary underline">
-            Word Expansion Tool
-          </Link>
-        </div>
-        <div className="absolute top-4 right-48 z-20 no-print">
-          <Link href="/notes" className="text-sm text-muted-foreground hover:text-primary underline">
-            Notes
-          </Link>
-        </div>
+          <header className="no-print sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-sm">
+            <div className="container mx-auto flex h-14 items-center justify-between">
+              <Link href="/" className="flex items-center gap-2">
+                <Book className="h-6 w-6 text-primary" />
+                <span className="font-headline text-xl font-bold text-primary">Hellenika Komiks</span>
+              </Link>
+              <nav className="flex items-center gap-2">
+                <Button variant="ghost" asChild>
+                  <Link href="/">
+                    <MessageSquare className="mr-2 h-4 w-4"/>
+                    Story Generator
+                  </Link>
+                </Button>
+                <Button variant="ghost" asChild>
+                  <Link href="/book-generator">
+                    <Book className="mr-2 h-4 w-4"/>
+                    Book Generator
+                  </Link>
+                </Button>
+                <Button variant="ghost" asChild>
+                   <Link href="/word-expansion">
+                    <StickyNote className="mr-2 h-4 w-4"/>
+                    Word Expansion
+                  </Link>
+                </Button>
+                <Button variant="ghost" asChild>
+                   <Link href="/notes">
+                    <StickyNote className="mr-2 h-4 w-4"/>
+                    Notes
+                  </Link>
+                </Button>
+              </nav>
+            </div>
+          </header>
         {children}
         <Toaster />
       </body>
