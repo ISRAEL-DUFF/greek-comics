@@ -1,10 +1,11 @@
+
 'use client';
 
 import React from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertCircle, BookOpen } from 'lucide-react';
 import type { BookResult } from '../actions';
 import {
   Carousel,
@@ -100,7 +101,7 @@ export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
                     <CarouselItem key={index}>
                         <div className="p-1 h-full">
                             <Card className="p-6 md:p-8 h-full flex flex-col justify-between min-h-[80vh]">
-                                <div className="flex-grow">
+                                <div className="flex-grow space-y-8">
                                     {page.title && <h2 className="text-2xl font-bold font-headline text-primary mb-6 text-center">{page.title}</h2>}
                                     <div className="space-y-6">
                                         {page.paragraphs.map((p, pIndex) => (
@@ -111,6 +112,34 @@ export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
                                         ))}
                                     </div>
                                 </div>
+                                
+                                {page.footnotes && page.footnotes.length > 0 && (
+                                    <div className="mt-8 pt-6 border-t-2 border-dashed">
+                                        <h4 className="font-headline text-lg font-semibold mb-4 text-center text-muted-foreground">Λεξικὸν (Glossary)</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4 text-sm">
+                                            {page.footnotes.map((note, noteIndex) => (
+                                                <div key={noteIndex} className="flex items-start gap-3">
+                                                    {note.illustrationUri && (
+                                                        <div className="w-10 h-10 relative flex-shrink-0 mt-1">
+                                                            <Image 
+                                                                src={note.illustrationUri} 
+                                                                alt={note.word} 
+                                                                layout="fill" 
+                                                                className="rounded-md object-contain"
+                                                                unoptimized
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <p className="font-bold lang-grc">{note.word}</p>
+                                                        <p className="text-muted-foreground lang-grc">{note.definition}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                
                                 <div className="text-center text-sm text-muted-foreground pt-8 mt-auto">
                                     <p>Page {page.pageNumber}</p>
                                 </div>
