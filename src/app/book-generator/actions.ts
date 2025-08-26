@@ -3,6 +3,7 @@
 
 import { z } from 'zod';
 import { generateGreekBook, generateBookCover, type GenerateGreekBookOutput } from '@/ai/flows/generate-greek-book-flow';
+import { generateFootnoteIllustration as generateFootnoteIllustrationFlow } from '@/ai/flows/generate-footnote-illustration';
 import { BookFormSchema } from './schema';
 
 export type BookData = GenerateGreekBookOutput & {
@@ -17,6 +18,13 @@ export type BookResult = {
   error?: string;
   fieldErrors?: { [key: string]: string[] | undefined };
 };
+
+export type GenerateImageResult = {
+    data?: {
+        illustrationUri: string;
+    };
+    error?: string;
+}
 
 
 export async function generateBookAction(
@@ -63,4 +71,17 @@ export async function generateBookAction(
     console.error("Error in generateBookAction:", error);
     return { error: 'An unexpected error occurred while generating the book. The AI service may be temporarily unavailable. Please try again later.' };
   }
+}
+
+export async function generateFootnoteIllustrationAction(prompt: string): Promise<GenerateImageResult> {
+    if (!prompt) {
+        return { error: 'Prompt cannot be empty.' };
+    }
+    try {
+        const result = await generateFootnoteIllustrationFlow({ prompt });
+        return { data: { illustrationUri: result.illustrationUri } };
+    } catch (error) {
+        console.error("Error in generateFootnoteIllustrationAction:", error);
+        return { error: 'Failed to generate illustration.' };
+    }
 }
