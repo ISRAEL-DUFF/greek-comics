@@ -13,6 +13,9 @@ export default function BookGeneratorPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showImages, setShowImages] = useState(true);
+  const [showTranslation, setShowTranslation] = useState(true);
+  const [showSyntax, setShowSyntax] = useState(false);
 
 
   const handleBookGenerated = (result: BookResult | null) => {
@@ -39,6 +42,8 @@ export default function BookGeneratorPage() {
         <FullscreenBookViewer 
             bookData={bookResult.data}
             onExitFullscreen={() => setIsFullscreen(false)}
+            showImages={showImages}
+            showTranslation={showTranslation}
         />
     );
   }
@@ -70,6 +75,12 @@ export default function BookGeneratorPage() {
               bookResult={bookResult} 
               isLoading={isLoading || isLoadingSaved}
               onEnterFullscreen={() => setIsFullscreen(true)}
+              showImages={showImages}
+              setShowImages={setShowImages}
+              showTranslation={showTranslation}
+              setShowTranslation={setShowTranslation}
+              showSyntax={showSyntax}
+              setShowSyntax={setShowSyntax}
             />
           </div>
         </div>

@@ -36,6 +36,12 @@ interface BookDisplayProps {
   bookResult: BookResult | null;
   isLoading: boolean;
   onEnterFullscreen: () => void;
+  showImages: boolean;
+  setShowImages: (value: boolean) => void;
+  showTranslation: boolean;
+  setShowTranslation: (value: boolean) => void;
+  showSyntax: boolean;
+  setShowSyntax: (value: boolean) => void;
 }
 
 type ModalState = {
@@ -47,12 +53,19 @@ type ModalState = {
     isMainIllustration?: boolean;
 }
 
-export function BookDisplay({ bookResult, isLoading, onEnterFullscreen }: BookDisplayProps) {
+export function BookDisplay({ 
+    bookResult, 
+    isLoading, 
+    onEnterFullscreen,
+    showImages,
+    setShowImages,
+    showTranslation,
+    setShowTranslation,
+    showSyntax,
+    setShowSyntax,
+}: BookDisplayProps) {
   const { toast } = useToast();
   const [currentBook, setCurrentBook] = useState<BookData | null>(bookResult?.data || null);
-  const [showImages, setShowImages] = useState(true);
-  const [showTranslation, setShowTranslation] = useState(true);
-  const [showSyntax, setShowSyntax] = useState(false);
   
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
@@ -198,7 +211,7 @@ export function BookDisplay({ bookResult, isLoading, onEnterFullscreen }: BookDi
               </Button>
           </div>
 
-          <Carousel className="w-full" opts={{ loop: false }}>
+          <Carousel className="lg:w-full w-[90vw]" opts={{ loop: false }}>
               <CarouselContent>
                   {/* Cover Page */}
                   <CarouselItem>
@@ -255,11 +268,10 @@ export function BookDisplay({ bookResult, isLoading, onEnterFullscreen }: BookDi
 
                                       <div className="space-y-6">
                                           {page.paragraphs.map((p, pIndex) => (
-                                              <div key={pIndex} className="mb-6">
-                                                  <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">{p.text}</p>
-
-                                                  {showTranslation && <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>}
-                                              </div>
+                                            <div key={pIndex} className="mb-6 last:mb-0">
+                                              <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">{p.text}</p>
+                                              {showTranslation && <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>}
+                                            </div>
                                           ))}
                                       </div>
                                   </div>
