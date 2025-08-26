@@ -16,6 +16,11 @@ interface SavedBooksListProps {
   onImportStarted: () => void;
 }
 
+const PageIllustrationSchema = z.object({
+    prompt: z.string(),
+    illustrationUri: z.string().optional(),
+});
+
 const FootnoteSchema = z.object({
     word: z.string(),
     definition: z.string(),
@@ -30,6 +35,8 @@ const PageSchema = z.object({
         text: z.string(),
         translation: z.string(),
     })),
+    // Add mainIllustrations with a default for backward compatibility
+    mainIllustrations: z.array(PageIllustrationSchema).optional().default([]),
     footnotes: z.array(FootnoteSchema),
 });
 

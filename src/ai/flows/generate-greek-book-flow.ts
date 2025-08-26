@@ -28,6 +28,11 @@ const FootnoteSchema = z.object({
     illustrationPrompt: z.string().describe('A short, simple prompt for generating a small black and white illustration for this dictionary entry (e.g., "a small boat", "a running horse").')
 });
 
+const PageIllustrationSchema = z.object({
+    prompt: z.string().describe('A detailed prompt for generating a full-color illustration for this page.'),
+    illustrationUri: z.string().optional().describe('The data URI for the illustration.')
+});
+
 const PageSchema = z.object({
     pageNumber: z.number().describe('The page number.'),
     title: z.string().optional().describe('The title of the page, if applicable.'),
@@ -35,6 +40,7 @@ const PageSchema = z.object({
         text: z.string().describe('A paragraph of the story in Ancient Greek.'),
         translation: z.string().describe('The English translation of the paragraph.'),
     })).describe('An array of paragraphs for the page.'),
+    mainIllustrations: z.array(PageIllustrationSchema).describe('An array of exactly 2 illustrations for the page content.'),
     footnotes: z.array(FootnoteSchema.extend({
         illustrationUri: z.string().optional().describe('The data URI for the footnote illustration.')
     }))
@@ -69,13 +75,14 @@ const generateGreekBookPrompt = ai.definePrompt({
   3.  Generate exactly {{{numPages}}} pages.
   4.  For each page, provide a 'pageNumber'.
   5.  For each page, you may optionally provide a short 'title'.
-  6.  For each page, write one or more paragraphs. Each must have Greek 'text' and an English 'translation'.
-  7.  For each page, identify 3-5 important vocabulary words. For each word, create a 'footnotes' entry with:
+  6.  For each page, write AT LEAST TWO paragraphs. Each paragraph must have Greek 'text' and an English 'translation'.
+  7.  For each page, generate a 'mainIllustrations' array containing exactly TWO detailed prompts for generating full-color illustrations of key scenes on that page. Leave the 'illustrationUri' field empty.
+  8.  For each page, identify 3-5 important vocabulary words. For each word, create a 'footnotes' entry with:
       a. The 'word' itself.
       b. A simple 'definition' for the word in Ancient Greek (define Greek with Greek).
-      c. A short, simple 'illustrationPrompt' for generating a small, minimalist, black and white sketch (e.g., "a running horse", "a small boat", "a tree").
-  8.  Ensure the vocabulary and grammar are suitable for the specified 'level' and 'grammarScope'.
-  9.  The 'illustrationUri' field for each footnote should be left empty. It will be populated later.
+      c. A short, simple 'illustrationPrompt' for generating a small, minimalist, black and white sketch (e.g., "a running horse", "a small boat", "a tree"). Leave the 'illustrationUri' field empty.
+  9.  Ensure the vocabulary and grammar are suitable for the specified 'level' and 'grammarScope'.
+  10. The 'illustrationUri' fields for all illustrations (main and footnote) should be left empty. They will be populated later.
 
   You MUST return the entire book as a single JSON object matching the specified output schema.
 `,
@@ -140,4 +147,5 @@ const generateBookCoverFlow = ai.defineFlow(
       return { coverIllustrationUri: media.url };
     }
   );
+
 

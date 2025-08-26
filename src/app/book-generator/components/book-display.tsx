@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Download, FileJson, ImagePlus } from 'lucide-react';
+import { AlertCircle, BookOpen, Download, FileJson, ImagePlus, Image as ImageIcon } from 'lucide-react';
 import type { BookResult } from '../actions';
 import {
   Carousel,
@@ -19,6 +19,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { FootnoteImageModal } from './footnote-image-modal';
 import type { BookData } from '../actions';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 interface BookDisplayProps {
   bookResult: BookResult | null;
@@ -28,18 +30,22 @@ interface BookDisplayProps {
 type ModalState = {
     isOpen: boolean;
     pageIndex: number;
-    noteIndex: number;
+    imageType: 'footnote' | 'main';
+    imageIndex: number;
     prompt: string;
+    isMainIllustration?: boolean;
 }
 
 export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
   const { toast } = useToast();
   const [currentBook, setCurrentBook] = useState<BookData | null>(bookResult?.data || null);
+  const [showImages, setShowImages] = useState(true);
   
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     pageIndex: -1,
-    noteIndex: -1,
+    imageType: 'footnote',
+    imageIndex: -1,
     prompt: '',
   });
 
@@ -66,29 +72,32 @@ export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
     });
   };
 
-  const openModal = (pageIndex: number, noteIndex: number, prompt: string) => {
-    setModalState({ isOpen: true, pageIndex, noteIndex, prompt });
+  const openModal = (pageIndex: number, imageIndex: number, prompt: string, imageType: 'main' | 'footnote') => {
+    setModalState({ isOpen: true, pageIndex, imageIndex, prompt, imageType });
   };
 
   const handleImageSave = (imageUri: string) => {
-    if (!currentBook || modalState.pageIndex === -1 || modalState.noteIndex === -1) return;
+    if (!currentBook || modalState.pageIndex === -1 || modalState.imageIndex === -1) return;
 
     // Create a deep copy of the book data to avoid direct state mutation
     const updatedBook = JSON.parse(JSON.stringify(currentBook));
     
-    // Update the specific footnote with the new image URI
-    updatedBook.pages[modalState.pageIndex].footnotes[modalState.noteIndex].illustrationUri = imageUri;
+    if (modalState.imageType === 'main') {
+        updatedBook.pages[modalState.pageIndex].mainIllustrations[modalState.imageIndex].illustrationUri = imageUri;
+    } else {
+        updatedBook.pages[modalState.pageIndex].footnotes[modalState.imageIndex].illustrationUri = imageUri;
+    }
 
     // Update the state with the modified book data
     setCurrentBook(updatedBook);
 
     toast({
         title: 'Illustration Updated',
-        description: 'The footnote has been updated with the new image.',
+        description: 'The illustration has been updated.',
     });
 
     // Close the modal
-    setModalState({ isOpen: false, pageIndex: -1, noteIndex: -1, prompt: '' });
+    setModalState({ isOpen: false, pageIndex: -1, imageIndex: -1, prompt: '', imageType: 'footnote' });
   };
 
 
@@ -144,9 +153,21 @@ export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
         onOpenChange={(isOpen) => setModalState(prev => ({...prev, isOpen}))}
         prompt={modalState.prompt}
         onSave={handleImageSave}
+        isMainIllustration={modalState.imageType === 'main'}
       />
       <div className="space-y-8">
-          <div className="no-print flex justify-end gap-2 flex-wrap items-center">
+          <div className="no-print flex justify-end gap-4 flex-wrap items-center">
+                <div className="flex items-center space-x-2 mr-auto">
+                    <Switch
+                        id="show-images"
+                        checked={showImages}
+                        onCheckedChange={setShowImages}
+                    />
+                    <Label htmlFor="show-images" className="flex items-center gap-2 text-sm">
+                        <ImageIcon className="h-4 w-4" />
+                        Show Illustrations
+                    </Label>
+                </div>
               <Button variant="outline" onClick={handleExportJson}>
                   <FileJson className="mr-2 h-4 w-4" />
                   Export JSON
@@ -189,6 +210,29 @@ export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
                               <Card className="p-6 md:p-8 h-full flex flex-col justify-between min-h-[80vh]">
                                   <div className="flex-grow space-y-8">
                                       {page.title && <h2 className="text-2xl font-bold font-headline text-primary mb-6 text-center">{page.title}</h2>}
+                                      
+                                        {showImages && (
+                                            <div className="grid grid-cols-2 gap-4 my-6">
+                                                {page.mainIllustrations.map((illustration, imgIndex) => (
+                                                    <div key={imgIndex} className="aspect-video w-full relative bg-muted rounded-md flex items-center justify-center">
+                                                        {illustration.illustrationUri ? (
+                                                            <Image
+                                                                src={illustration.illustrationUri}
+                                                                alt={illustration.prompt}
+                                                                layout="fill"
+                                                                className="rounded-md object-cover"
+                                                                unoptimized
+                                                            />
+                                                        ) : (
+                                                            <button onClick={() => openModal(pageIndex, imgIndex, illustration.prompt, 'main')} className="w-full h-full flex items-center justify-center bg-muted rounded-md hover:bg-muted/80 transition-colors">
+                                                                <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
                                       <div className="space-y-6">
                                           {page.paragraphs.map((p, pIndex) => (
                                               <div key={pIndex}>
@@ -216,7 +260,7 @@ export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
                                                                   unoptimized
                                                               />
                                                           ) : (
-                                                              <button onClick={() => openModal(pageIndex, noteIndex, note.illustrationPrompt)} className="w-full h-full flex items-center justify-center bg-muted rounded-md hover:bg-muted/80 transition-colors">
+                                                              <button onClick={() => openModal(pageIndex, noteIndex, note.illustrationPrompt, 'footnote')} className="w-full h-full flex items-center justify-center bg-muted rounded-md hover:bg-muted/80 transition-colors">
                                                                   <ImagePlus className="h-5 w-5 text-muted-foreground" />
                                                               </button>
                                                           )}

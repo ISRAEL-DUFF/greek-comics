@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { generateGreekBook, generateBookCover, type GenerateGreekBookOutput } from '@/ai/flows/generate-greek-book-flow';
 import { generateFootnoteIllustration as generateFootnoteIllustrationFlow } from '@/ai/flows/generate-footnote-illustration';
 import { BookFormSchema } from './schema';
+import { ai } from '@/ai/genkit';
 
 export type BookData = GenerateGreekBookOutput & {
     coverIllustrationUri: string;
@@ -82,6 +83,32 @@ export async function generateFootnoteIllustrationAction(prompt: string): Promis
         return { data: { illustrationUri: result.illustrationUri } };
     } catch (error) {
         console.error("Error in generateFootnoteIllustrationAction:", error);
+        return { error: 'Failed to generate illustration.' };
+    }
+}
+
+
+export async function generateMainIllustrationAction(prompt: string): Promise<GenerateImageResult> {
+    if (!prompt) {
+        return { error: 'Prompt cannot be empty.' };
+    }
+    try {
+        const fullPrompt = `A full color, detailed illustration for a story about Ancient Greece. Do not include any text. The scene to illustrate is: ${prompt}.`;
+        const {media} = await ai.generate({
+            model: 'googleai/gemini-2.0-flash-preview-image-generation',
+            prompt: [{ text: fullPrompt }],
+            config: {
+                responseModalities: ['TEXT', 'IMAGE'],
+            },
+        });
+        
+        if (!media || !media.url) {
+            throw new Error('No image was generated for the page.');
+        }
+
+        return { data: { illustrationUri: media.url } };
+    } catch (error) {
+        console.error("Error in generateMainIllustrationAction:", error);
         return { error: 'Failed to generate illustration.' };
     }
 }

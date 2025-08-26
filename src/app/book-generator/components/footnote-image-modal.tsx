@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useTransition, useRef } from 'react';
+import { useState, useTransition, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Copy, Upload, Wand2, Save } from 'lucide-react';
-import { generateFootnoteIllustrationAction } from '../actions';
+import { generateFootnoteIllustrationAction, generateMainIllustrationAction } from '../actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface FootnoteImageModalProps {
@@ -23,6 +23,7 @@ interface FootnoteImageModalProps {
   onOpenChange: (isOpen: boolean) => void;
   prompt: string;
   onSave: (imageUri: string) => void;
+  isMainIllustration?: boolean;
 }
 
 export function FootnoteImageModal({
@@ -30,6 +31,7 @@ export function FootnoteImageModal({
   onOpenChange,
   prompt,
   onSave,
+  isMainIllustration = false,
 }: FootnoteImageModalProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -39,6 +41,14 @@ export function FootnoteImageModal({
   const [error, setError] = useState<string | null>(null);
 
   const finalImage = generatedImage || uploadedImage;
+  
+  // Reset state when the prompt changes (i.e., a new modal is opened for a different item)
+  useEffect(() => {
+    setGeneratedImage(null);
+    setUploadedImage(null);
+    setError(null);
+  }, [prompt]);
+
 
   const handleCopyToClipboard = () => {
     navigator.clipboard.writeText(prompt);
@@ -50,7 +60,10 @@ export function FootnoteImageModal({
       setError(null);
       setUploadedImage(null);
       setGeneratedImage(null);
-      const result = await generateFootnoteIllustrationAction(prompt);
+      
+      const generationFunction = isMainIllustration ? generateMainIllustrationAction : generateFootnoteIllustrationAction;
+      const result = await generationFunction(prompt);
+
       if (result.error) {
         setError(result.error);
         toast({
@@ -119,9 +132,9 @@ export function FootnoteImageModal({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Footnote Illustration</DialogTitle>
+          <DialogTitle>{isMainIllustration ? 'Page Illustration' : 'Footnote Illustration'}</DialogTitle>
           <DialogDescription>
-            Generate or upload an image for this footnote.
+            Generate or upload an image.
           </DialogDescription>
         </DialogHeader>
 
@@ -133,7 +146,7 @@ export function FootnoteImageModal({
                 readOnly
                 value={prompt}
                 className="pr-10 bg-muted"
-                rows={3}
+                rows={isMainIllustration ? 4 : 3}
               />
               <Button
                 size="icon"
