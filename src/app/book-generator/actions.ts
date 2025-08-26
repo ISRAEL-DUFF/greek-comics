@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 import { generateGreekBook, generateBookCover, type GenerateGreekBookOutput } from '@/ai/flows/generate-greek-book-flow';
-import { BookFormSchema } from './components/book-generator-form';
+import { BookFormSchema } from './schema';
 
 export type BookData = GenerateGreekBookOutput & {
     coverIllustrationUri: string;
