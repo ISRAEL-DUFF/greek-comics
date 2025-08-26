@@ -5,7 +5,7 @@ import React from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen } from 'lucide-react';
+import { AlertCircle, BookOpen, Download, FileJson } from 'lucide-react';
 import type { BookResult } from '../actions';
 import {
   Carousel,
@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/carousel"
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface BookDisplayProps {
   bookResult: BookResult | null;
@@ -23,6 +25,26 @@ interface BookDisplayProps {
 }
 
 export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
+  const { toast } = useToast();
+
+  const handleExportJson = () => {
+    if (!bookResult?.data) return;
+
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(bookResult.data, null, 2)
+    )}`;
+    const link = document.createElement("a");
+    link.href = jsonString;
+    const topicSlug = bookResult.data.topic.toLowerCase().replace(/\s+/g, '-').slice(0, 50);
+    link.download = `${topicSlug}-hellenika-book.json`;
+
+    link.click();
+    toast({
+        title: 'Book Exported',
+        description: 'Your book has been downloaded as a JSON file.',
+    });
+  };
+
 
   if (isLoading) {
     return (
@@ -71,6 +93,17 @@ export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
 
   return (
     <div className="space-y-8">
+        <div className="no-print flex justify-end gap-2 flex-wrap items-center">
+            <Button variant="outline" onClick={handleExportJson}>
+                <FileJson className="mr-2 h-4 w-4" />
+                Export JSON
+            </Button>
+            <Button variant="outline" onClick={() => window.print()}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+            </Button>
+        </div>
+
         <Carousel className="w-full" opts={{ loop: false }}>
             <CarouselContent>
                 {/* Cover Page */}
@@ -107,6 +140,7 @@ export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
                                         {page.paragraphs.map((p, pIndex) => (
                                             <div key={pIndex}>
                                                 <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">{p.text}</p>
+
                                                 <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>
                                             </div>
                                         ))}

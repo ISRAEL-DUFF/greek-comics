@@ -1,13 +1,36 @@
+
 'use client';
 
 import { useState } from 'react';
 import { BookGeneratorForm } from './components/book-generator-form';
 import { BookDisplay } from './components/book-display';
-import type { BookResult } from './actions';
+import { SavedBooksList } from './components/saved-books-list';
+import type { BookResult, BookData } from './actions';
 
 export default function BookGeneratorPage() {
   const [bookResult, setBookResult] = useState<BookResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSaved, setIsLoadingSaved] = useState(false);
+
+  const handleBookGenerated = (result: BookResult | null) => {
+    if(result) {
+      setBookResult(result);
+    }
+  };
+
+  const handleImportedBook = (importedData: BookData | null) => {
+    if (importedData) {
+      setBookResult({ data: importedData });
+    }
+    // This will be called after the import action is complete, successful or not.
+    setIsLoadingSaved(false);
+  };
+  
+  const handleImportStarted = () => {
+    setIsLoadingSaved(true);
+    setBookResult(null);
+  };
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
@@ -20,16 +43,20 @@ export default function BookGeneratorPage() {
           <aside className="no-print lg:col-span-4 xl:col-span-3">
              <div className="sticky top-24 space-y-8">
                 <BookGeneratorForm
-                    setBookResult={setBookResult}
+                    setBookResult={handleBookGenerated}
                     setIsLoading={setIsLoading}
                     isLoading={isLoading}
+                />
+                <SavedBooksList 
+                  onBookImported={handleImportedBook}
+                  onImportStarted={handleImportStarted}
                 />
              </div>
           </aside>
           <div className="lg:col-span-8 xl:col-span-9">
             <BookDisplay
               bookResult={bookResult} 
-              isLoading={isLoading}
+              isLoading={isLoading || isLoadingSaved}
             />
           </div>
         </div>
