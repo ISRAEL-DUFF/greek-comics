@@ -1,0 +1,190 @@
+
+'use client';
+
+import React from 'react';
+import Image from 'next/image';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AlertCircle, BookOpen, Download, FileJson } from 'lucide-react';
+import type { BookResult } from '../actions';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+
+interface BookDisplayProps {
+  bookResult: BookResult | null;
+  isLoading: boolean;
+}
+
+export function BookDisplay({ bookResult, isLoading }: BookDisplayProps) {
+  const { toast } = useToast();
+
+  const handleExportJson = () => {
+    if (!bookResult?.data) return;
+
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(bookResult.data, null, 2)
+    )}`;
+    const link = document.createElement("a");
+    link.href = jsonString;
+    const topicSlug = bookResult.data.topic.toLowerCase().replace(/\s+/g, '-').slice(0, 50);
+    link.download = `${topicSlug}-hellenika-book.json`;
+
+    link.click();
+    toast({
+        title: 'Book Exported',
+        description: 'Your book has been downloaded as a JSON file.',
+    });
+  };
+
+
+  if (isLoading) {
+    return (
+      <Card className="p-6">
+        <div className="flex flex-col md:flex-row gap-8 items-center">
+            <div className="w-full md:w-1/3">
+                <Skeleton className="w-full aspect-[3/4] rounded-lg" />
+            </div>
+            <div className="w-full md:w-2/3 space-y-4">
+                <Skeleton className="h-8 w-3/4" />
+                <Skeleton className="h-5 w-1/2" />
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-5/6" />
+            </div>
+        </div>
+      </Card>
+    );
+  }
+
+  if (bookResult?.error) {
+    return (
+      <Card className="flex flex-col items-center justify-center p-8 text-center">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <h3 className="mt-4 text-xl font-semibold">Generation Failed</h3>
+        <p className="mt-2 text-muted-foreground">{bookResult.error}</p>
+      </Card>
+    );
+  }
+
+  if (!bookResult?.data) {
+    return (
+      <Card className="flex flex-col items-center justify-center p-8 text-center border-dashed min-h-[60vh]">
+        <BookOpen className="h-16 w-16 text-muted-foreground/50" />
+        <h3 className="mt-4 text-xl font-semibold font-headline">
+          Your Book Awaits
+        </h3>
+        <p className="mt-2 text-muted-foreground">
+          Use the form to generate a new illustrated book.
+        </p>
+      </Card>
+    );
+  }
+
+  const { title, author, pages, coverIllustrationUri, level, topic, grammarScope } = bookResult.data;
+
+  return (
+    <div className="space-y-8">
+        <div className="no-print flex justify-end gap-2 flex-wrap items-center">
+            <Button variant="outline" onClick={handleExportJson}>
+                <FileJson className="mr-2 h-4 w-4" />
+                Export JSON
+            </Button>
+            <Button variant="outline" onClick={() => window.print()}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+            </Button>
+        </div>
+
+        <Carousel className="w-full" opts={{ loop: false }}>
+            <CarouselContent>
+                {/* Cover Page */}
+                <CarouselItem>
+                    <Card className="p-4 md:p-6 border-primary border-2">
+                        <div className="flex flex-col items-center text-center gap-4">
+                            <h1 className="text-4xl font-headline font-bold text-primary">{title}</h1>
+                            <p className="text-lg text-muted-foreground">by {author}</p>
+                            <div className="w-full max-w-md aspect-[3/4] relative mt-4">
+                                <Image
+                                    src={coverIllustrationUri}
+                                    alt={`Cover for: ${title}`}
+                                    layout="fill"
+                                    className="rounded-lg object-cover shadow-lg"
+                                    unoptimized
+                                />
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-4 justify-center">
+                                <Badge variant="secondary">{level}</Badge>
+                                <Badge variant="secondary">{topic}</Badge>
+                                <Badge variant="secondary">{grammarScope}</Badge>
+                            </div>
+                        </div>
+                    </Card>
+                </CarouselItem>
+                {/* Content Pages */}
+                {pages.map((page, index) => (
+                    <CarouselItem key={index}>
+                        <div className="p-1 h-full">
+                            <Card className="p-6 md:p-8 h-full flex flex-col justify-between min-h-[80vh]">
+                                <div className="flex-grow space-y-8">
+                                    {page.title && <h2 className="text-2xl font-bold font-headline text-primary mb-6 text-center">{page.title}</h2>}
+                                    <div className="space-y-6">
+                                        {page.paragraphs.map((p, pIndex) => (
+                                            <div key={pIndex}>
+                                                <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">{p.text}</p>
+
+                                                <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                {page.footnotes && page.footnotes.length > 0 && (
+                                    <div className="mt-8 pt-6 border-t-2 border-dashed">
+                                        <h4 className="font-headline text-lg font-semibold mb-4 text-center text-muted-foreground">Λεξικὸν (Glossary)</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4 text-sm">
+                                            {page.footnotes.map((note, noteIndex) => (
+                                                <div key={noteIndex} className="flex items-start gap-3">
+                                                    {note.illustrationUri && (
+                                                        <div className="w-10 h-10 relative flex-shrink-0 mt-1">
+                                                            <Image 
+                                                                src={note.illustrationUri} 
+                                                                alt={note.word} 
+                                                                layout="fill" 
+                                                                className="rounded-md object-contain"
+                                                                unoptimized
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <p className="font-bold lang-grc">{note.word}</p>
+                                                        <p className="text-muted-foreground lang-grc">{note.definition}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                <div className="text-center text-sm text-muted-foreground pt-8 mt-auto">
+                                    <p>Page {page.pageNumber}</p>
+                                </div>
+                            </Card>
+                        </div>
+                    </CarouselItem>
+                ))}
+            </CarouselContent>
+            <CarouselPrevious className="ml-12" />
+            <CarouselNext className="mr-12" />
+        </Carousel>
+    </div>
+  );
+}

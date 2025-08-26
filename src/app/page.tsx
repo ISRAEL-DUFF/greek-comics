@@ -129,13 +129,11 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
-      <header className="no-print sticky top-0 z-10 border-b bg-background/80 py-4 backdrop-blur-sm">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="font-headline text-4xl font-bold text-primary">Ἑλληνικὰ Κόμιξ</h1>
-          <p className="mt-1 text-lg text-muted-foreground">Ancient Greek Illustrated Story Generator</p>
-        </div>
-      </header>
       <main className="container mx-auto flex-1 px-4 py-8">
+        <div className="text-center mb-12">
+            <h1 className="font-headline text-4xl font-bold text-primary">Story Generator</h1>
+            <p className="mt-1 text-lg text-muted-foreground">Create short, sentence-by-sentence illustrated stories.</p>
+        </div>
         <div className="grid gap-12 lg:grid-cols-12">
           <aside className="no-print lg:col-span-4 xl:col-span-3">
              <div className="sticky top-24 space-y-8">
