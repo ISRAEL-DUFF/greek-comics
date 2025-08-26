@@ -1,0 +1,114 @@
+
+'use server';
+
+import { z } from 'zod';
+import { generateGreekBook, generateBookCover, type GenerateGreekBookOutput } from '@/ai/flows/generate-greek-book-flow';
+import { generateFootnoteIllustration as generateFootnoteIllustrationFlow } from '@/ai/flows/generate-footnote-illustration';
+import { BookFormSchema } from './schema';
+import { ai } from '@/ai/genkit';
+
+export type BookData = GenerateGreekBookOutput & {
+    coverIllustrationUri: string;
+    topic: string;
+    level: string;
+    grammarScope: string;
+};
+
+export type BookResult = {
+  data?: BookData;
+  error?: string;
+  fieldErrors?: { [key: string]: string[] | undefined };
+};
+
+export type GenerateImageResult = {
+    data?: {
+        illustrationUri: string;
+    };
+    error?: string;
+}
+
+
+export async function generateBookAction(
+  formData: FormData
+): Promise<BookResult> {
+  const validatedFields = BookFormSchema.safeParse({
+    level: formData.get('level'),
+    topic: formData.get('topic'),
+    grammarScope: formData.get('grammarScope'),
+    numPages: formData.get('numPages'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      error: "Invalid form data. Please check the fields and try again.",
+      fieldErrors: validatedFields.error.flatten().fieldErrors,
+    };
+  }
+  
+  try {
+    const bookPromise = generateGreekBook(validatedFields.data);
+    const coverPromise = generateBookCover(validatedFields.data.topic, validatedFields.data.topic);
+
+    const [bookContent, coverImage] = await Promise.all([bookPromise, coverPromise]);
+
+    if (!bookContent || !bookContent.pages || bookContent.pages.length === 0) {
+      return { error: 'Generated book was empty or invalid.' };
+    }
+    if(!coverImage.coverIllustrationUri) {
+        return { error: 'Could not generate a book cover.' };
+    }
+
+    return { 
+      data: {
+        ...bookContent,
+        coverIllustrationUri: coverImage.coverIllustrationUri,
+        topic: validatedFields.data.topic,
+        level: validatedFields.data.level,
+        grammarScope: validatedFields.data.grammarScope,
+      }
+    };
+
+  } catch (error) {
+    console.error("Error in generateBookAction:", error);
+    return { error: 'An unexpected error occurred while generating the book. The AI service may be temporarily unavailable. Please try again later.' };
+  }
+}
+
+export async function generateFootnoteIllustrationAction(prompt: string): Promise<GenerateImageResult> {
+    if (!prompt) {
+        return { error: 'Prompt cannot be empty.' };
+    }
+    try {
+        const result = await generateFootnoteIllustrationFlow({ prompt });
+        return { data: { illustrationUri: result.illustrationUri } };
+    } catch (error) {
+        console.error("Error in generateFootnoteIllustrationAction:", error);
+        return { error: 'Failed to generate illustration.' };
+    }
+}
+
+
+export async function generateMainIllustrationAction(prompt: string): Promise<GenerateImageResult> {
+    if (!prompt) {
+        return { error: 'Prompt cannot be empty.' };
+    }
+    try {
+        const fullPrompt = `A full color, detailed illustration for a story about Ancient Greece. Do not include any text. The scene to illustrate is: ${prompt}.`;
+        const {media} = await ai.generate({
+            model: 'googleai/gemini-2.0-flash-preview-image-generation',
+            prompt: [{ text: fullPrompt }],
+            config: {
+                responseModalities: ['TEXT', 'IMAGE'],
+            },
+        });
+        
+        if (!media || !media.url) {
+            throw new Error('No image was generated for the page.');
+        }
+
+        return { data: { illustrationUri: media.url } };
+    } catch (error) {
+        console.error("Error in generateMainIllustrationAction:", error);
+        return { error: 'Failed to generate illustration.' };
+    }
+}

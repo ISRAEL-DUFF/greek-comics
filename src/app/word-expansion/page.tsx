@@ -187,18 +187,11 @@ function WordExpansionContent() {
         onSelectWord={handleSelectWordFromSearch}
       />
       <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
-        <header className="sticky top-0 z-10 border-b bg-background/80 py-4 backdrop-blur-sm">
-          <div className="container mx-auto px-4 text-center">
+        <main className="container mx-auto flex-1 px-4 py-8">
+          <div className="text-center mb-12">
             <h1 className="font-headline text-4xl font-bold text-primary">Word Expansion Tool</h1>
             <p className="mt-1 text-lg text-muted-foreground">Detailed Greek Word Analysis</p>
-            <div className="absolute top-4 left-4">
-              <Link href="/" className="text-sm text-muted-foreground hover:text-primary underline">
-                  &larr; Back to Story Generator
-              </Link>
-            </div>
           </div>
-        </header>
-        <main className="container mx-auto flex-1 px-4 py-8">
           <div className="grid gap-12 lg:grid-cols-12">
             <aside className="lg:col-span-4 xl:col-span-3">
               <div className="sticky top-24 space-y-8">
