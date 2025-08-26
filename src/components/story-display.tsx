@@ -4,7 +4,7 @@ import React, { useRef, useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson, Info, RefreshCcw, MessageSquareQuote, Image as ImageIcon, WholeWord } from 'lucide-react';
+import { AlertCircle, BookOpen, Save, Loader2, Download, FileJson, Info, RefreshCcw, MessageSquareQuote, Image as ImageIcon, WholeWord, Languages } from 'lucide-react';
 import type { StoryResult, GlossStoryOutput, Sentence, Word } from '@/app/actions';
 import { WordGloss } from './word-gloss';
 import { cn } from '@/lib/utils';
@@ -42,6 +42,8 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showImages, setShowImages] = useState(true);
   const [showSyntax, setShowSyntax] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(true);
+
   const { toast } = useToast();
   const storyContentRef = useRef<HTMLDivElement>(null);
 
@@ -220,7 +222,18 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
             />
             <Label htmlFor="show-images" className="flex items-center gap-2 text-sm">
               <ImageIcon className="h-4 w-4" />
-              Show Illustrations
+              Illustrations
+            </Label>
+          </div>
+           <div className="flex items-center space-x-2">
+            <Switch
+              id="show-translation"
+              checked={showTranslation}
+              onCheckedChange={setShowTranslation}
+            />
+            <Label htmlFor="show-translation" className="flex items-center gap-2 text-sm">
+              <Languages className="h-4 w-4" />
+              Translation
             </Label>
           </div>
           <div className="flex items-center space-x-2">
@@ -231,7 +244,7 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
             />
             <Label htmlFor="show-syntax" className="flex items-center gap-2 text-sm">
               <WholeWord className="h-4 w-4" />
-              Show Syntax Analysis
+              Analysis
             </Label>
           </div>
         </div>
@@ -327,6 +340,10 @@ export function StoryDisplay({ storyResult, isLoading, onStorySaved, currentStor
                       <WordGloss key={i} wordObj={wordObj} glosses={glosses} />
                     ))}
                   </p>
+                  
+                  {showTranslation && sentenceObj.detailedSyntax && (
+                      <p className="mt-4 text-base italic text-muted-foreground">{sentenceObj.detailedSyntax.translation}</p>
+                  )}
                   
                   {showSyntax && sentenceObj.detailedSyntax && (
                     <div className="mt-4 text-right">

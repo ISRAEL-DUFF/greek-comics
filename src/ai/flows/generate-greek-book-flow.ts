@@ -28,6 +28,11 @@ const FootnoteSchema = z.object({
     illustrationPrompt: z.string().describe('A short, simple prompt for generating a small black and white illustration for this dictionary entry (e.g., "a small boat", "a running horse").')
 });
 
+const PageIllustrationSchema = z.object({
+    prompt: z.string().describe('A detailed prompt for generating a full-color illustration for this page.'),
+    illustrationUri: z.string().optional().describe('The data URI for the illustration.')
+});
+
 const PageSchema = z.object({
     pageNumber: z.number().describe('The page number.'),
     title: z.string().optional().describe('The title of the page, if applicable.'),
@@ -35,17 +40,16 @@ const PageSchema = z.object({
         text: z.string().describe('A paragraph of the story in Ancient Greek.'),
         translation: z.string().describe('The English translation of the paragraph.'),
     })).describe('An array of paragraphs for the page.'),
-    footnotes: z.array(FootnoteSchema).describe('An array of 3-5 important words from the page with simple Greek-to-Greek definitions and prompts for illustrations.')
+    mainIllustrations: z.array(PageIllustrationSchema).describe('An array of exactly 2 illustrations for the page content.'),
+    footnotes: z.array(FootnoteSchema.extend({
+        illustrationUri: z.string().optional().describe('The data URI for the footnote illustration.')
+    }))
 });
 
 const GenerateGreekBookOutputSchema = z.object({
   title: z.string().describe('The title of the book.'),
   author: z.string().describe("The fictional Ancient Greek author's name."),
-  pages: z.array(PageSchema.extend({
-    footnotes: z.array(FootnoteSchema.extend({
-        illustrationUri: z.string().optional().describe('The data URI for the footnote illustration.')
-    }))
-  })).describe('The array of pages that make up the book, with illustrated footnotes.'),
+  pages: z.array(PageSchema).describe('The array of pages that make up the book, with illustrated footnotes.'),
 });
 export type GenerateGreekBookOutput = z.infer<typeof GenerateGreekBookOutputSchema>;
 
@@ -57,9 +61,7 @@ export async function generateGreekBook(input: GenerateGreekBookInput): Promise<
 const generateGreekBookPrompt = ai.definePrompt({
   name: 'generateGreekBookPrompt',
   input: {schema: GenerateGreekBookInputSchema},
-  output: {schema: GenerateGreekBookOutputSchema.omit({ pages: true }).extend({
-    pages: z.array(PageSchema) // Generate without illustration URI first
-  })},
+  output: {schema: GenerateGreekBookOutputSchema},
   prompt: `You are an expert in Ancient Greek language and literature. Your task is to generate a short book in Attic Greek based on the user's specifications. The book should be structured with a main title, a fictional author, and multiple pages.
 
   Level: {{{level}}}
@@ -73,27 +75,18 @@ const generateGreekBookPrompt = ai.definePrompt({
   3.  Generate exactly {{{numPages}}} pages.
   4.  For each page, provide a 'pageNumber'.
   5.  For each page, you may optionally provide a short 'title'.
-  6.  For each page, write one or more paragraphs. Each must have Greek 'text' and an English 'translation'.
-  7.  For each page, identify 3-5 important vocabulary words. For each word, create a 'footnotes' entry with:
+  6.  For each page, write AT LEAST TWO paragraphs. Each paragraph must have Greek 'text' and an English 'translation'.
+  7.  For each page, generate a 'mainIllustrations' array containing exactly TWO detailed prompts for generating full-color illustrations of key scenes on that page. Leave the 'illustrationUri' field empty.
+  8.  For each page, identify 3-5 important vocabulary words. For each word, create a 'footnotes' entry with:
       a. The 'word' itself.
       b. A simple 'definition' for the word in Ancient Greek (define Greek with Greek).
-      c. A short, simple 'illustrationPrompt' for generating a small, minimalist, black and white sketch (e.g., "a running horse", "a small boat", "a tree").
-  8.  Ensure the vocabulary and grammar are suitable for the specified 'level' and 'grammarScope'.
+      c. A short, simple 'illustrationPrompt' for generating a small, minimalist, black and white sketch (e.g., "a running horse", "a small boat", "a tree"). Leave the 'illustrationUri' field empty.
+  9.  Ensure the vocabulary and grammar are suitable for the specified 'level' and 'grammarScope'.
+  10. The 'illustrationUri' fields for all illustrations (main and footnote) should be left empty. They will be populated later.
 
   You MUST return the entire book as a single JSON object matching the specified output schema.
 `,
 });
-
-async function generateFootnoteIllustration(prompt: string): Promise<string> {
-    const { media } = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-preview-image-generation',
-        prompt: [{ text: `A small, simple, minimalist, black and white icon-style sketch of: ${prompt}.` }],
-        config: {
-            responseModalities: ['TEXT', 'IMAGE'],
-        },
-    });
-    return media?.url || '';
-}
 
 const generateGreekBookFlow = ai.defineFlow(
   {
@@ -102,39 +95,12 @@ const generateGreekBookFlow = ai.defineFlow(
     outputSchema: GenerateGreekBookOutputSchema,
   },
   async input => {
-    // 1. Generate the book content without footnote images.
-    const {output: bookWithoutIllustrations} = await generateGreekBookPrompt(input);
-    if (!bookWithoutIllustrations) {
+    // Generate the book content without any illustrations.
+    const {output} = await generateGreekBookPrompt(input);
+    if (!output) {
         throw new Error('Failed to generate book content.');
     }
-
-    // 2. Collect all footnote illustration prompts.
-    const illustrationJobs: {pageIndex: number, noteIndex: number, prompt: string}[] = [];
-    bookWithoutIllustrations.pages.forEach((page, pageIndex) => {
-        page.footnotes.forEach((note, noteIndex) => {
-            if (note.illustrationPrompt) {
-                illustrationJobs.push({ pageIndex, noteIndex, prompt: note.illustrationPrompt });
-            }
-        });
-    });
-
-    // 3. Generate illustrations in parallel.
-    const illustrationResults = await Promise.all(
-        illustrationJobs.map(job => generateFootnoteIllustration(job.prompt))
-    );
-    
-    // 4. Create a copy of the book data to add illustration URIs to.
-    const illustratedBook: GenerateGreekBookOutput = JSON.parse(JSON.stringify(bookWithoutIllustrations));
-
-    // 5. Add the generated data URIs back to the book structure.
-    illustrationResults.forEach((uri, i) => {
-        const job = illustrationJobs[i];
-        if (uri) {
-            illustratedBook.pages[job.pageIndex].footnotes[job.noteIndex].illustrationUri = uri;
-        }
-    });
-
-    return illustratedBook;
+    return output;
   }
 );
 
@@ -181,4 +147,5 @@ const generateBookCoverFlow = ai.defineFlow(
       return { coverIllustrationUri: media.url };
     }
   );
+
 
