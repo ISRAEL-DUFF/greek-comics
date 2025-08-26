@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -52,8 +53,6 @@ const generateGreekBookPrompt = ai.definePrompt({
   Grammar Scope: {{{grammarScope}}}
   Number of Pages: {{{numPages}}}
 
-  The story should be coherent, engaging, and appropriate for the specified learner level.
-
   Instructions:
   1.  Create a compelling 'title' for the entire book.
   2.  Invent a plausible Ancient Greek 'author' name.
@@ -83,7 +82,7 @@ const generateGreekBookFlow = ai.defineFlow(
 
 
 // Separate flow for generating the cover
-export const GenerateBookCoverOutputSchema = z.object({
+const GenerateBookCoverOutputSchema = z.object({
     coverIllustrationUri: z
       .string()
       .describe(
