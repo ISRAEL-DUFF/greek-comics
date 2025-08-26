@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { z } from 'zod';
+import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { generateBookAction, BookFormSchema, type BookResult } from '../actions';
+import { generateBookAction, type BookResult } from '../actions';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,13 @@ type BookGeneratorFormProps = {
   setBookResult: (result: BookResult | null) => void;
   isLoading: boolean;
 };
+
+export const BookFormSchema = z.object({
+  level: z.enum(['Beginner', 'Intermediate', 'Advanced']),
+  topic: z.string().min(3, 'Topic must be at least 3 characters long.').max(100, 'Topic must be 100 characters or less.'),
+  grammarScope: z.string().min(3, 'Grammar scope must be at least 3 characters long.').max(100, 'Grammar scope must be 100 characters or less.'),
+  numPages: z.coerce.number().int().min(1, 'Must be at least 1 page.').max(10, 'Cannot be more than 10 pages.').default(3),
+});
 
 type BookFormValues = z.infer<typeof BookFormSchema>;
 
