@@ -13,7 +13,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel"
 import type { BookData } from '../actions';
-import { X } from 'lucide-react';
+import { ImagePlus, X } from 'lucide-react';
 
 interface FullscreenBookViewerProps {
   bookData: BookData;
@@ -30,9 +30,9 @@ export function FullscreenBookViewer({
 }: FullscreenBookViewerProps) {
   const { title, author, pages, coverIllustrationUri } = bookData;
 
-  return (
-    <div className="fixed inset-0 bg-gray-900 text-white z-50 flex flex-col">
-      <header className="flex items-center justify-between p-4 border-b border-gray-700">
+  return ( 
+    <div className="fixed inset-0 bg-background text-foreground z-50 flex flex-col">
+      <header className="flex items-center justify-between p-4 border-b border-primary border-2">
         <div className="text-lg font-headline">{title}</div>
         <Button variant="ghost" size="icon" onClick={onExitFullscreen}>
           <X className="h-6 w-6" />
@@ -44,7 +44,7 @@ export function FullscreenBookViewer({
             <CarouselContent className="h-full">
                 {/* Cover Page */}
                 <CarouselItem className="flex items-center justify-center">
-                    <Card className="bg-gray-800 border-primary text-white max-w-lg w-full">
+                    <Card className="bg-background text-foreground border-primary border-2 text-white max-w-lg w-full">
                         <CardContent className="p-4 md:p-6 flex flex-col items-center text-center gap-4">
                             <h1 className="text-3xl md:text-4xl font-headline font-bold text-primary">{title}</h1>
                             <p className="text-lg text-gray-400">by {author}</p>
@@ -64,7 +64,7 @@ export function FullscreenBookViewer({
                 {/* Content Pages */}
                  {pages.map((page, pageIndex) => (
                     <CarouselItem key={pageIndex} className="flex items-center justify-center">
-                         <Card className="bg-gray-800 border-gray-700 text-white max-w-4xl w-full h-[90vh] overflow-y-auto">
+                         <Card className="bg-background text-foreground border-primary border-2 max-w-4xl w-full h-full overflow-y-auto">
                             <CardContent className="p-6 md:p-8">
                                 <div className="flex-grow space-y-8">
                                     {page.title && <h2 className="text-2xl font-bold font-headline text-primary mb-6 text-center">{page.title}</h2>}
@@ -72,8 +72,8 @@ export function FullscreenBookViewer({
                                     {showImages && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
                                             {page.mainIllustrations.map((illustration, imgIndex) => (
-                                                <div key={imgIndex} className="aspect-video w-full relative bg-gray-700 rounded-md flex items-center justify-center">
-                                                    {illustration.illustrationUri && (
+                                                <div key={imgIndex} className="aspect-video w-full relative bg-muted rounded-md flex items-center justify-center">
+                                                    {illustration.illustrationUri ? (
                                                         <Image
                                                             src={illustration.illustrationUri}
                                                             alt={illustration.prompt}
@@ -81,6 +81,10 @@ export function FullscreenBookViewer({
                                                             className="rounded-md object-cover"
                                                             unoptimized
                                                         />
+                                                    ) : (
+                                                        <button className="w-full h-full flex items-center justify-center bg-muted rounded-md hover:bg-muted/80 transition-colors">
+                                                            <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                                                        </button>
                                                     )}
                                                 </div>
                                             ))}
@@ -89,34 +93,38 @@ export function FullscreenBookViewer({
 
                                     <div className="space-y-6">
                                         {page.paragraphs.map((p, pIndex) => (
-                                            <div key={pIndex} className="mb-6 last:mb-0">
-                                                <p className="text-xl lg:text-2xl leading-relaxed font-body lang-grc">{p.text}</p>
-                                                {showTranslation && <p className="text-base italic text-gray-400 mt-2">{p.translation}</p>}
-                                            </div>
+                                        <div key={pIndex} className="mb-6 last:mb-0">
+                                            <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">{p.text}</p>
+                                            {showTranslation && <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>}
+                                        </div>
                                         ))}
                                     </div>
                                 </div>
                                 
                                 {page.footnotes && page.footnotes.length > 0 && (
-                                    <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-600">
-                                        <h4 className="font-headline text-lg font-semibold mb-4 text-center text-gray-400">Λεξικὸν</h4>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+                                    <div className="mt-8 pt-6 border-t-2 border-dashed">
+                                        <h4 className="font-headline text-lg font-semibold mb-4 text-center text-muted-foreground">Λεξικὸν (Glossary)</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4 text-sm">
                                             {page.footnotes.map((note, noteIndex) => (
                                                 <div key={noteIndex} className="flex items-start gap-3">
-                                                     {note.illustrationUri && (
-                                                        <div className="w-12 h-12 relative flex-shrink-0 mt-1 bg-gray-700 rounded-md">
+                                                    <div className="w-10 h-10 relative flex-shrink-0 mt-1">
+                                                        {note.illustrationUri ? (
                                                             <Image 
                                                                 src={note.illustrationUri} 
                                                                 alt={note.word} 
                                                                 layout="fill" 
-                                                                className="rounded-md object-contain p-1"
+                                                                className="rounded-md object-contain"
                                                                 unoptimized
                                                             />
-                                                        </div>
-                                                     )}
+                                                        ) : (
+                                                            <button className="w-full h-full flex items-center justify-center bg-muted rounded-md hover:bg-muted/80 transition-colors">
+                                                                <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                     <div>
                                                         <p className="font-bold lang-grc">{note.word}</p>
-                                                        <p className="text-gray-400 lang-grc">{note.definition}</p>
+                                                        <p className="text-muted-foreground lang-grc">{note.definition}</p>
                                                     </div>
                                                 </div>
                                             ))}
@@ -124,7 +132,7 @@ export function FullscreenBookViewer({
                                     </div>
                                 )}
                                 
-                                <div className="text-center text-sm text-gray-500 pt-8 mt-auto">
+                                <div className="text-center text-sm text-muted-foreground pt-8 mt-auto">
                                     <p>Page {page.pageNumber}</p>
                                 </div>
                             </CardContent>
@@ -132,8 +140,8 @@ export function FullscreenBookViewer({
                     </CarouselItem>
                 ))}
             </CarouselContent>
-            <CarouselPrevious className="left-4 text-white hover:text-primary" />
-            <CarouselNext className="right-4 text-white hover:text-primary" />
+            <CarouselPrevious className="left-4 text-white hover:text-primary hidden md:flex" />
+            <CarouselNext className="right-4 text-white hover:text-primary hidden md:flex" />
         </Carousel>
       </main>
     </div>
