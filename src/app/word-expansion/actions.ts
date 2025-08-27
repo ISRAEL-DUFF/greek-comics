@@ -27,6 +27,53 @@ type UpdateResult = {
     error?: string;
 }
 
+async function searchExistingForm(word: string): Promise<{data?: ExpandedWord, error?: any}> {
+  if (!supabase) {
+    return { error: Error('No supabase found')};
+  }
+  if (!word) {
+    return { error: Error('Word cannot be empty')};
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from(EXPANDED_WORDS_TABLE)
+      .select('*')
+      .eq('language', 'greek')
+      .ilike('expansion', `%${word}%`) // Case-insensitive search
+      .not('word', 'eq', '')
+      .order('word', { ascending: true });
+
+    if (error) {
+      console.error('Error searching expanded words:', error);
+      return { error };;
+    }
+
+    let listOfWords: typeof data = []
+
+    for(const d of data) {
+      const etymologyRegex = /\*\*(\d+\.\s*)?Etymology\*\*:/i;
+      const regexEx = /\*\*\d+\. Etymology:\*\*\n/; // DO NOT DELETE THIS
+      const relevantPart = d.expansion.split(etymologyRegex)[0];
+      const regex = new RegExp(`(^|[^\\p{L}])(${word})(?=[^\\p{L}]|$)`, 'u')
+
+      // console.log({
+      //   length: relevantPart.length,
+      //   relevantPart: relevantPart.substr(relevantPart.length - 800, relevantPart.length)
+      // })
+
+      if(regex.test(relevantPart)) {
+        return { data: d }
+      }
+    }
+
+    return {}
+  } catch (error) {
+    console.error('Error in searchExpandedWordsAction:', error);
+    return { error };
+  }
+}
+
 // Action to generate, save, and return a word expansion for one or more words.
 export async function generateAndSaveWordExpansionAction(words: string): Promise<GenerateResult> {
   if (!words) {
@@ -48,12 +95,7 @@ export async function generateAndSaveWordExpansionAction(words: string): Promise
   try {
     for (const word of wordList) {
         // 1. Check if the word already exists in the database (case-insensitive)
-        const { data: existingWord, error: fetchError } = await supabase
-            .from(EXPANDED_WORDS_TABLE)
-            .select('*')
-            .eq('word', word)
-            .eq('language', 'greek')
-            .maybeSingle();
+          const { data: existingWord, error: fetchError } = await searchExistingForm(word)
 
         if (fetchError) {
             console.error(`Error fetching word "${word}":`, fetchError);
@@ -67,7 +109,7 @@ export async function generateAndSaveWordExpansionAction(words: string): Promise
         }
 
         // 3. If it doesn't exist, generate the expansion
-        const { expansion } = await expandWord({ word });
+        const { expansion, lemma } = await expandWord({ word });
 
         if (!expansion) {
             console.warn(`Failed to generate expansion for "${word}".`);
@@ -77,7 +119,7 @@ export async function generateAndSaveWordExpansionAction(words: string): Promise
         // 4. Save the new expansion to Supabase
         const { data: newWord, error: insertError } = await supabase
             .from(EXPANDED_WORDS_TABLE)
-            .insert({ word, expansion, language: 'greek' })
+            .insert({ word, expansion, lemma, language: 'greek' })
             .select()
             .single();
 
@@ -139,7 +181,7 @@ export async function getExpandedWordsAction(): Promise<ExpandedWordListItem[]> 
   try {
     const { data, error } = await supabase
       .from(EXPANDED_WORDS_TABLE)
-      .select('id, word')
+      .select('id, word, lemma')
       .eq('language', 'greek')
       .not('word', 'eq', '') // Filter out rows where word is an empty string
       .order('word', { ascending: true });
