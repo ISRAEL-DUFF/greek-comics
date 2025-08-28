@@ -9,8 +9,6 @@ import { Button } from "@/components/ui/button";
 import { BookMarked, Upload } from "lucide-react";
 import type { BookData } from '../actions';
 import { z } from 'zod';
-import { DetailedSyntaxSchema } from '@/lib/schemas';
-
 
 interface SavedBooksListProps {
   onBookImported: (storyData: BookData | null) => void;
@@ -30,27 +28,16 @@ const FootnoteSchema = z.object({
 });
 
 
-const WordSchema = z.object({
-  word: z.string(),
-  syntaxNote: z.string(),
-});
-
-const SentenceSchema = z.object({
-  sentence: z.string(),
-  words: z.array(WordSchema),
-  detailedSyntax: DetailedSyntaxSchema,
-});
-
-const ParagraphSchema = z.object({
-    sentences: z.array(SentenceSchema),
-});
-
 const PageSchema = z.object({
-    pageNumber: z.number(),
-    title: z.string().optional(),
-    paragraphs: z.array(ParagraphSchema),
-    mainIllustrations: z.array(PageIllustrationSchema).optional().default([]),
-    footnotes: z.array(FootnoteSchema),
+  pageNumber: z.number(),
+  title: z.string().optional(),
+  paragraphs: z.array(z.object({
+      text: z.string(),
+      translation: z.string(),
+  })),
+  // Add mainIllustrations with a default for backward compatibility
+  mainIllustrations: z.array(PageIllustrationSchema).optional().default([]),
+  footnotes: z.array(FootnoteSchema),
 });
 
 
