@@ -62,6 +62,10 @@ export default function BookGeneratorPage() {
             showImages={showImages}
             showTranslation={showTranslation}
             onAddWordToPanel={wordLookup.addWord}
+            onOpenPanel={() => setIsPanelOpen(true)}
+            pendingWordCount={wordLookup.pendingCount}
+            lookupState={wordLookup.lookupState}
+           removeWord={wordLookup.removeWord}
         />
     );
   }

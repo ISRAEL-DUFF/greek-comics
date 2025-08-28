@@ -13,7 +13,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel"
 import type { BookData } from '../actions';
-import { ImagePlus, X, BadgeHelp } from 'lucide-react';
+import { ImagePlus, X, BadgeHelp} from 'lucide-react';
 import {
     Popover,
     PopoverContent,
@@ -21,13 +21,20 @@ import {
 } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { Library } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { WordLookupPanel } from './word-lookup-panel';
+import { LookupState } from '@/hooks/use-word-lookup';
 
 interface FullscreenBookViewerProps {
   bookData: BookData;
   onExitFullscreen: () => void;
   showImages: boolean;
   showTranslation: boolean;
+  onOpenPanel: () => void;
   onAddWordToPanel: (word: string) => void;
+  pendingWordCount: number;
+  lookupState: LookupState;
+  removeWord: (word: string) => void;
 }
 
 function WordClickPopover({ word, onAddWord }: { word: string, onAddWord: (word: string) => void }) {
@@ -73,14 +80,34 @@ export function FullscreenBookViewer({
     onExitFullscreen, 
     showImages, 
     showTranslation,
-    onAddWordToPanel
+    onAddWordToPanel,
+    pendingWordCount,
+    onOpenPanel,
+    lookupState,
+    removeWord
 }: FullscreenBookViewerProps) {
   const { title, author, pages, coverIllustrationUri } = bookData;
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   return ( 
     <div className="fixed inset-0 bg-background text-foreground z-50 flex flex-col">
+        <WordLookupPanel
+        isOpen={isPanelOpen}
+        onOpenChange={setIsPanelOpen}
+        lookupState={lookupState}
+        removeWord={removeWord}
+        // dialogClassName="z-60"
+      />
       <header className="flex items-center justify-between p-4 border-b border-primary border-2">
         <div className="text-lg font-headline">{title}</div>
+        <Button variant="outline" className="relative" onClick={() => setIsPanelOpen(true)}>
+            <Library className="mr-2 h-4 w-4" />
+            {pendingWordCount > 0 && (
+            <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">
+                {pendingWordCount}
+            </Badge>
+            )}
+        </Button>
         <Button variant="ghost" size="icon" onClick={onExitFullscreen}>
           <X className="h-6 w-6" />
           <span className="sr-only">Exit Fullscreen</span>
