@@ -7,6 +7,16 @@ import { BookDisplay } from './components/book-display';
 import { SavedBooksList } from './components/saved-books-list';
 import type { BookResult, BookData } from './actions';
 import { FullscreenBookViewer } from './components/fullscreen-book-viewer';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { BookMarked, PlusCircle } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 export default function BookGeneratorPage() {
   const [bookResult, setBookResult] = useState<BookResult | null>(null);
@@ -16,12 +26,15 @@ export default function BookGeneratorPage() {
   const [showImages, setShowImages] = useState(true);
   const [showTranslation, setShowTranslation] = useState(true);
   const [showSyntax, setShowSyntax] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isSavedOpen, setIsSavedOpen] = useState(false);
 
 
   const handleBookGenerated = (result: BookResult | null) => {
     if(result) {
       setBookResult(result);
     }
+    setIsCreateOpen(false); // Close modal on generation
   };
 
   const handleImportedBook = (importedData: BookData | null) => {
@@ -30,6 +43,7 @@ export default function BookGeneratorPage() {
     }
     // This will be called after the import action is complete, successful or not.
     setIsLoadingSaved(false);
+    setIsSavedOpen(false); // Close modal on import
   };
   
   const handleImportStarted = () => {
@@ -56,8 +70,44 @@ export default function BookGeneratorPage() {
             <h1 className="font-headline text-4xl font-bold text-primary">Book Generator</h1>
             <p className="mt-1 text-lg text-muted-foreground">Generate a complete, illustrated book in Ancient Greek.</p>
         </div>
+
+        {/* Mobile View: Modals */}
+        <div className="lg:hidden mb-6 grid grid-cols-2 gap-4">
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Create New Book
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                 <BookGeneratorForm
+                    setBookResult={handleBookGenerated}
+                    setIsLoading={setIsLoading}
+                    isLoading={isLoading}
+                />
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isSavedOpen} onOpenChange={setIsSavedOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline">
+                        <BookMarked className="mr-2 h-4 w-4" />
+                        View Saved Books
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                     <SavedBooksList 
+                        onBookImported={handleImportedBook}
+                        onImportStarted={handleImportStarted}
+                    />
+                </DialogContent>
+            </Dialog>
+        </div>
+
         <div className="grid gap-12 lg:grid-cols-12">
-          <aside className="no-print lg:col-span-4 xl:col-span-3">
+          {/* Desktop View: Sidebar */}
+          <aside className="no-print hidden lg:block lg:col-span-4 xl:col-span-3">
              <div className="sticky top-24 space-y-8">
                 <BookGeneratorForm
                     setBookResult={handleBookGenerated}
@@ -70,6 +120,8 @@ export default function BookGeneratorPage() {
                 />
              </div>
           </aside>
+          
+          {/* Main Content */}
           <div className="lg:col-span-8 xl:col-span-9">
             <BookDisplay
               bookResult={bookResult} 

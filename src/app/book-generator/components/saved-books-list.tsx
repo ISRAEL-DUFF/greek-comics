@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { BookMarked, Upload } from "lucide-react";
-import { BookData } from '../actions';
+import type { BookData } from '../actions';
 import { z } from 'zod';
-import { BookFormSchema } from '../schema';
+import { DetailedSyntaxSchema } from '@/lib/schemas';
+
 
 interface SavedBooksListProps {
   onBookImported: (storyData: BookData | null) => void;
@@ -28,17 +29,30 @@ const FootnoteSchema = z.object({
     illustrationUri: z.string().optional(),
 });
 
+
+const WordSchema = z.object({
+  word: z.string(),
+  syntaxNote: z.string(),
+});
+
+const SentenceSchema = z.object({
+  sentence: z.string(),
+  words: z.array(WordSchema),
+  detailedSyntax: DetailedSyntaxSchema,
+});
+
+const ParagraphSchema = z.object({
+    sentences: z.array(SentenceSchema),
+});
+
 const PageSchema = z.object({
     pageNumber: z.number(),
     title: z.string().optional(),
-    paragraphs: z.array(z.object({
-        text: z.string(),
-        translation: z.string(),
-    })),
-    // Add mainIllustrations with a default for backward compatibility
+    paragraphs: z.array(ParagraphSchema),
     mainIllustrations: z.array(PageIllustrationSchema).optional().default([]),
     footnotes: z.array(FootnoteSchema),
 });
+
 
 // This schema is for validating imported JSON files.
 const BookDataSchema = z.object({
@@ -118,7 +132,7 @@ export function SavedBooksList({ onBookImported, onImportStarted }: SavedBooksLi
   };
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg border-0 md:border md:shadow-lg">
       <CardHeader>
         <div className="flex justify-between items-start">
             <div>
