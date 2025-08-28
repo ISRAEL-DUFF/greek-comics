@@ -17,7 +17,8 @@ const ExpandWordInputSchema = z.object({
 export type ExpandWordInput = z.infer<typeof ExpandWordInputSchema>;
 
 const ExpandWordOutputSchema = z.object({
-    expansion: z.string().describe('The detailed word analysis in Markdown format, including tables for paradigms.')
+    expansion: z.string().describe('The detailed word analysis in Markdown format, including tables for paradigms.'),
+    lemma: z.string().describe('The dictionary form of the word'),
 });
 export type ExpandWordOutput = z.infer<typeof ExpandWordOutputSchema>;
 
@@ -46,7 +47,7 @@ const expandWordPrompt = ai.definePrompt({
 5.  **Usage**: Provide a detailed description of the participle's usage in a sentence.
 
 **If the word is a NOUN:**
-1.  **Gloss**: Provide its dictionary form (lemma), part of speech (including gender), and a concise English definition.
+1.  **Gloss**: Provide its dictionary form (lemma), part of speech (including gender), Declension type, and a concise English definition.
 2.  **Full Declension**: Generate its full declension paradigm in a Markdown table.
 3.  **Etymology**: Provide a detailed etymology of the word, including its root/stem.
 
@@ -61,7 +62,7 @@ const expandWordPrompt = ai.definePrompt({
 2.  **Etymology**: Provide a detailed etymology of the word, including its root/stem.
 3.  **Usage**: Provide a detailed description of the word's usage in a sentence with examples.
 
-Your output MUST be a single Markdown string in the 'expansion' field of the JSON response.
+Your output MUST be a single Markdown string in the 'expansion' field of the JSON response and the dictionary form of the word in the 'lemma' field of the same JSON response
 `,
 });
 

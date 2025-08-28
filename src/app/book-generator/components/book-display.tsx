@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { FootnoteImageModal } from './footnote-image-modal';
-import type { BookData, Paragraph } from '../actions';
+import type { BookData } from '../actions';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -211,7 +211,7 @@ export function BookDisplay({
               </Button>
           </div>
 
-          <Carousel className="w-full" opts={{ loop: false }}>
+          <Carousel className="lg:w-full w-[90vw]" opts={{ loop: false }}>
               <CarouselContent>
                   {/* Cover Page */}
                   <CarouselItem>

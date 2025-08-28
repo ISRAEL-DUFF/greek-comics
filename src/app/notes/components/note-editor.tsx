@@ -66,11 +66,8 @@ export function NoteEditor({ note, isLoading }: NoteEditorProps) {
         debouncedTitle !== note.title ||
         JSON.stringify(debouncedTags) !== JSON.stringify(note.tags))
     ) {
-      handleAutoSaveChanges();
-      // setTimeout(() => {
-      //   if(isSaving) return;
-      //   handleAutoSaveChanges();
-      // }, 3000)
+      // Disable auto save for now
+      // handleAutoSaveChanges();
       console.log('Auto saving...')
     }
   }, [debouncedContent, debouncedTitle, debouncedTags, note, isEditMode]);
@@ -217,7 +214,7 @@ export function NoteEditor({ note, isLoading }: NoteEditorProps) {
             <MarkdownEditor className='w-[82vw] overflow-x-auto' value={content} onChange={(value) => setContent(value || '')} />
          ) : (
             <div className="p-1 h-full prose-sm prose-p:font-body max-w-none">
-              <MarkdownDisplay markdown={content} className="w-[85vw] mx-auto overflow-x-auto" markdownClassName = "prose prose-sm prose-p:font-body prose-headings:font-headline max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2 overflow-x-auto" />
+              <MarkdownDisplay markdown={content} className="w-[80vw] mx-auto overflow-x-auto" markdownClassName = "prose prose-sm prose-p:font-body prose-headings:font-headline max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2 overflow-x-auto" />
             </div>
          )}
       </div>
