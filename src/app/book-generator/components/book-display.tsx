@@ -330,49 +330,22 @@ export function BookDisplay({
                                           {page.paragraphs.map((p, pIndex) => (
                                             <div key={pIndex} className="mb-6 last:mb-0">
                                               <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">
-                                                 {p.sentences.map((s, sIndex) => (
+                                                {p.text.split('.').map((s, sIndex, arr) => {
+                                                  const words = s.trim().split(/\s+/).filter(Boolean);
+                                                  return (
                                                     <React.Fragment key={sIndex}>
-                                                        {s.words.map((w, wIndex) => (
-                                                           <WordClickPopover key={wIndex} word={w.word} onAddWord={() => onAddWordToPanel(w.word.replace(/[.,·;]/g, ''))} />
-                                                        ))}
-                                                        {showTranslation && s.detailedSyntax && <span className="text-base italic text-muted-foreground ml-2">({s.detailedSyntax.translation})</span>}
-                                                        {showSyntax && s.detailedSyntax && (
-                                                          <Dialog>
-                                                            <DialogTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="h-6 w-6 ml-1 text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground">
-                                                                    <BadgeHelp className="h-4 w-4" />
-                                                                </Button>
-                                                            </DialogTrigger>
-                                                            <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-                                                                <DialogHeader>
-                                                                    <DialogTitle className="font-headline text-2xl">Sentence Analysis</DialogTitle>
-                                                                    <DialogDescription className="font-body text-lg">{s.sentence}</DialogDescription>
-                                                                </DialogHeader>
-                                                                <div className="flex-1 overflow-hidden">
-                                                                    <ScrollArea className="h-full pr-6">
-                                                                        <div className="space-y-4">
-                                                                            <div>
-                                                                                <h4 className="font-semibold text-primary">Translation</h4>
-                                                                                <p className="text-base italic">{s.detailedSyntax.translation}</p>
-                                                                            </div>
-                                                                            <Separator />
-                                                                            <div>
-                                                                                <h4 className="font-semibold text-primary">Syntax & Semantic Breakdown</h4>
-                                                                                <div 
-                                                                                    className="prose prose-sm max-w-none whitespace-pre-wrap"
-                                                                                    dangerouslySetInnerHTML={{ __html: s.detailedSyntax.breakdown.replace(/\n/g, '<br />') }}
-                                                                                ></div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </ScrollArea>
-                                                                </div>
-                                                            </DialogContent>
-                                                          </Dialog>
-                                                        )}
-                                                        {' '}
+                                                      {words.map((w, wIndex) => (
+                                                        <React.Fragment key={`${sIndex}-${wIndex}`}>
+                                                          <WordClickPopover word={w} onAddWord={() => onAddWordToPanel(w.replace(/[.,·;]/g, ''))} />
+                                                          {wIndex < words.length - 1 ? ' ' : ''}
+                                                        </React.Fragment>
+                                                      ))}
+                                                      {sIndex < arr.length - 1 ? '. ' : ''}
                                                     </React.Fragment>
-                                                ))}
+                                                  );
+                                                })}
                                               </p>
+                                              {showTranslation && <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>}
                                             </div>
                                           ))}
                                       </div>
