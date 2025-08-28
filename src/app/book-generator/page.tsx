@@ -11,12 +11,11 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { BookMarked, PlusCircle } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { WordLookupPanel } from './components/word-lookup-panel';
+import { useWordLookup } from '@/hooks/use-word-lookup';
+
 
 export default function BookGeneratorPage() {
   const [bookResult, setBookResult] = useState<BookResult | null>(null);
@@ -28,12 +27,15 @@ export default function BookGeneratorPage() {
   const [showSyntax, setShowSyntax] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isSavedOpen, setIsSavedOpen] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
+  const wordLookup = useWordLookup();
 
   const handleBookGenerated = (result: BookResult | null) => {
     if(result) {
       setBookResult(result);
     }
+    wordLookup.clearPanel(); // Clear the panel when a new book is generated
     setIsCreateOpen(false); // Close modal on generation
   };
 
@@ -41,7 +43,7 @@ export default function BookGeneratorPage() {
     if (importedData) {
       setBookResult({ data: importedData });
     }
-    // This will be called after the import action is complete, successful or not.
+    wordLookup.clearPanel(); // Clear the panel when a new book is imported
     setIsLoadingSaved(false);
     setIsSavedOpen(false); // Close modal on import
   };
@@ -58,6 +60,7 @@ export default function BookGeneratorPage() {
             onExitFullscreen={() => setIsFullscreen(false)}
             showImages={showImages}
             showTranslation={showTranslation}
+            onAddWordToPanel={wordLookup.addWord}
         />
     );
   }
@@ -65,7 +68,13 @@ export default function BookGeneratorPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
-      <main className="container mx-auto flex-1 px-4 py-8">
+      <WordLookupPanel
+        isOpen={isPanelOpen}
+        onOpenChange={setIsPanelOpen}
+        lookupState={wordLookup.lookupState}
+        removeWord={wordLookup.removeWord}
+      />
+       <main className="container mx-auto flex-1 px-4 py-8">
         <div className="text-center mb-12">
             <h1 className="font-headline text-4xl font-bold text-primary">Book Generator</h1>
             <p className="mt-1 text-lg text-muted-foreground">Generate a complete, illustrated book in Ancient Greek.</p>
@@ -133,6 +142,9 @@ export default function BookGeneratorPage() {
               setShowTranslation={setShowTranslation}
               showSyntax={showSyntax}
               setShowSyntax={setShowSyntax}
+              onAddWordToPanel={wordLookup.addWord}
+              onOpenPanel={() => setIsPanelOpen(true)}
+              pendingWordCount={wordLookup.pendingCount}
             />
           </div>
         </div>

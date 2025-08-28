@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Download, FileJson, ImagePlus, Image as ImageIcon, Languages, Maximize, MessageSquareQuote, WholeWord } from 'lucide-react';
+import { AlertCircle, BookOpen, Download, FileJson, ImagePlus, Image as ImageIcon, Languages, Maximize, MessageSquareQuote, WholeWord, Library, BadgeHelp, ClipboardCheck } from 'lucide-react';
 import type { BookResult } from '../actions';
 import {
   Carousel,
@@ -31,6 +31,12 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+
 
 interface BookDisplayProps {
   bookResult: BookResult | null;
@@ -42,6 +48,9 @@ interface BookDisplayProps {
   setShowTranslation: (value: boolean) => void;
   showSyntax: boolean;
   setShowSyntax: (value: boolean) => void;
+  onAddWordToPanel: (word: string) => void;
+  onOpenPanel: () => void;
+  pendingWordCount: number;
 }
 
 type ModalState = {
@@ -53,6 +62,45 @@ type ModalState = {
     isMainIllustration?: boolean;
 }
 
+function WordClickPopover({ word, onAddWord }: { word: string, onAddWord: (word: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleAdd = () => {
+    onAddWord(word);
+    toast({
+      title: 'Word Added to Panel',
+      description: `"${word}" has been added to the lookup panel.`,
+    });
+    setIsOpen(false);
+  };
+
+  if (!word.trim()) {
+      return <span>{word}</span>;
+  }
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <span className="cursor-pointer rounded-md px-1 transition-colors hover:bg-primary/20 focus:bg-primary/30 focus:outline-none">
+          {word}
+        </span>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto max-w-sm p-3 text-sm" side="top" align="center">
+        <div className="space-y-2 text-center">
+            <p className="font-semibold text-base">Add this word to the lookup panel?</p>
+            <p className="text-xs text-muted-foreground">The panel will automatically expand it for you.</p>
+            <Button size="sm" className="w-full" onClick={handleAdd}>
+                <Library className="mr-2 h-4 w-4" />
+                Add &quot;{word}&quot;
+            </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+
 export function BookDisplay({ 
     bookResult, 
     isLoading, 
@@ -63,6 +111,9 @@ export function BookDisplay({
     setShowTranslation,
     showSyntax,
     setShowSyntax,
+    onAddWordToPanel,
+    onOpenPanel,
+    pendingWordCount,
 }: BookDisplayProps) {
   const { toast } = useToast();
   const [currentBook, setCurrentBook] = useState<BookData | null>(bookResult?.data || null);
@@ -197,6 +248,15 @@ export function BookDisplay({
                         <Label htmlFor="show-syntax" className="flex items-center gap-2 text-sm"><WholeWord className="h-4 w-4" />Analysis</Label>
                     </div>
                 </div>
+              <Button variant="outline" className="relative" onClick={onOpenPanel}>
+                  <Library className="mr-2 h-4 w-4" />
+                  Lookup Panel
+                  {pendingWordCount > 0 && (
+                    <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">
+                      {pendingWordCount}
+                    </Badge>
+                  )}
+              </Button>
               <Button variant="outline" onClick={handleExportJson}>
                   <FileJson className="mr-2 h-4 w-4" />
                   Export
@@ -269,8 +329,50 @@ export function BookDisplay({
                                       <div className="space-y-6">
                                           {page.paragraphs.map((p, pIndex) => (
                                             <div key={pIndex} className="mb-6 last:mb-0">
-                                              <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">{p.text}</p>
-                                              {showTranslation && <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>}
+                                              <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">
+                                                 {p.sentences.map((s, sIndex) => (
+                                                    <React.Fragment key={sIndex}>
+                                                        {s.words.map((w, wIndex) => (
+                                                           <WordClickPopover key={wIndex} word={w.word} onAddWord={() => onAddWordToPanel(w.word.replace(/[.,·;]/g, ''))} />
+                                                        ))}
+                                                        {showTranslation && s.detailedSyntax && <span className="text-base italic text-muted-foreground ml-2">({s.detailedSyntax.translation})</span>}
+                                                        {showSyntax && s.detailedSyntax && (
+                                                          <Dialog>
+                                                            <DialogTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-6 w-6 ml-1 text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground">
+                                                                    <BadgeHelp className="h-4 w-4" />
+                                                                </Button>
+                                                            </DialogTrigger>
+                                                            <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+                                                                <DialogHeader>
+                                                                    <DialogTitle className="font-headline text-2xl">Sentence Analysis</DialogTitle>
+                                                                    <DialogDescription className="font-body text-lg">{s.sentence}</DialogDescription>
+                                                                </DialogHeader>
+                                                                <div className="flex-1 overflow-hidden">
+                                                                    <ScrollArea className="h-full pr-6">
+                                                                        <div className="space-y-4">
+                                                                            <div>
+                                                                                <h4 className="font-semibold text-primary">Translation</h4>
+                                                                                <p className="text-base italic">{s.detailedSyntax.translation}</p>
+                                                                            </div>
+                                                                            <Separator />
+                                                                            <div>
+                                                                                <h4 className="font-semibold text-primary">Syntax & Semantic Breakdown</h4>
+                                                                                <div 
+                                                                                    className="prose prose-sm max-w-none whitespace-pre-wrap"
+                                                                                    dangerouslySetInnerHTML={{ __html: s.detailedSyntax.breakdown.replace(/\n/g, '<br />') }}
+                                                                                ></div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </ScrollArea>
+                                                                </div>
+                                                            </DialogContent>
+                                                          </Dialog>
+                                                        )}
+                                                        {' '}
+                                                    </React.Fragment>
+                                                ))}
+                                              </p>
                                             </div>
                                           ))}
                                       </div>

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,20 +13,76 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel"
 import type { BookData } from '../actions';
-import { ImagePlus, X } from 'lucide-react';
+import { ImagePlus, X, BadgeHelp } from 'lucide-react';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import { useToast } from '@/hooks/use-toast';
+import { Library } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 interface FullscreenBookViewerProps {
   bookData: BookData;
   onExitFullscreen: () => void;
   showImages: boolean;
   showTranslation: boolean;
+  onAddWordToPanel: (word: string) => void;
+}
+
+function WordClickPopover({ word, onAddWord }: { word: string, onAddWord: (word: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleAdd = () => {
+    onAddWord(word);
+    toast({
+      title: 'Word Added to Panel',
+      description: `"${word}" has been added to the lookup panel.`,
+    });
+    setIsOpen(false);
+  };
+
+  if (!word.trim()) {
+      return <span>{word}</span>;
+  }
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <span className="cursor-pointer rounded-md px-1 transition-colors hover:bg-primary/20 focus:bg-primary/30 focus:outline-none">
+          {word}
+        </span>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto max-w-sm p-3 text-sm" side="top" align="center">
+        <div className="space-y-2 text-center">
+            <p className="font-semibold text-base">Add this word to the lookup panel?</p>
+            <p className="text-xs text-muted-foreground">The panel will automatically expand it for you.</p>
+            <Button size="sm" className="w-full" onClick={handleAdd}>
+                <Library className="mr-2 h-4 w-4" />
+                Add &quot;{word}&quot;
+            </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export function FullscreenBookViewer({ 
     bookData, 
     onExitFullscreen, 
     showImages, 
-    showTranslation 
+    showTranslation,
+    onAddWordToPanel
 }: FullscreenBookViewerProps) {
   const { title, author, pages, coverIllustrationUri } = bookData;
 
@@ -94,8 +150,48 @@ export function FullscreenBookViewer({
                                     <div className="space-y-6">
                                         {page.paragraphs.map((p, pIndex) => (
                                         <div key={pIndex} className="mb-6 last:mb-0">
-                                            <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">{p.text}</p>
-                                            {showTranslation && <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>}
+                                             <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">
+                                                 {p.sentences.map((s, sIndex) => (
+                                                    <React.Fragment key={sIndex}>
+                                                        {s.words.map((w, wIndex) => (
+                                                           <WordClickPopover key={wIndex} word={w.word} onAddWord={() => onAddWordToPanel(w.word.replace(/[.,·;]/g, ''))} />
+                                                        ))}
+                                                        {showTranslation && s.detailedSyntax && <span className="text-base italic text-muted-foreground ml-2">({s.detailedSyntax.translation})</span>}
+                                                         <Dialog>
+                                                            <DialogTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-6 w-6 ml-1 text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground">
+                                                                    <BadgeHelp className="h-4 w-4" />
+                                                                </Button>
+                                                            </DialogTrigger>
+                                                            <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+                                                                <DialogHeader>
+                                                                    <DialogTitle className="font-headline text-2xl">Sentence Analysis</DialogTitle>
+                                                                    <DialogDescription className="font-body text-lg">{s.sentence}</DialogDescription>
+                                                                </DialogHeader>
+                                                                <div className="flex-1 overflow-hidden">
+                                                                    <ScrollArea className="h-full pr-6">
+                                                                        <div className="space-y-4">
+                                                                            <div>
+                                                                                <h4 className="font-semibold text-primary">Translation</h4>
+                                                                                <p className="text-base italic">{s.detailedSyntax.translation}</p>
+                                                                            </div>
+                                                                            <Separator />
+                                                                            <div>
+                                                                                <h4 className="font-semibold text-primary">Syntax & Semantic Breakdown</h4>
+                                                                                <div 
+                                                                                    className="prose prose-sm max-w-none whitespace-pre-wrap"
+                                                                                    dangerouslySetInnerHTML={{ __html: s.detailedSyntax.breakdown.replace(/\n/g, '<br />') }}
+                                                                                ></div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </ScrollArea>
+                                                                </div>
+                                                            </DialogContent>
+                                                          </Dialog>
+                                                        {' '}
+                                                    </React.Fragment>
+                                                ))}
+                                              </p>
                                         </div>
                                         ))}
                                     </div>
