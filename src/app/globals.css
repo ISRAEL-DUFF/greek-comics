@@ -102,3 +102,8 @@
     margin: 0.5in;
   }
 }
+
+.scroll-both [data-radix-scroll-area-viewport] {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}

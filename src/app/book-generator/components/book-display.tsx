@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Download, FileJson, ImagePlus, Image as ImageIcon, Languages, Maximize, MessageSquareQuote, WholeWord } from 'lucide-react';
+import { AlertCircle, BookOpen, Download, FileJson, ImagePlus, Image as ImageIcon, Languages, Maximize, MessageSquareQuote, WholeWord, Library, BadgeHelp, ClipboardCheck } from 'lucide-react';
 import type { BookResult } from '../actions';
 import {
   Carousel,
@@ -31,6 +31,12 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+
 
 interface BookDisplayProps {
   bookResult: BookResult | null;
@@ -42,6 +48,9 @@ interface BookDisplayProps {
   setShowTranslation: (value: boolean) => void;
   showSyntax: boolean;
   setShowSyntax: (value: boolean) => void;
+  onAddWordToPanel: (word: string) => void;
+  onOpenPanel: () => void;
+  pendingWordCount: number;
 }
 
 type ModalState = {
@@ -53,6 +62,45 @@ type ModalState = {
     isMainIllustration?: boolean;
 }
 
+function WordClickPopover({ word, onAddWord }: { word: string, onAddWord: (word: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleAdd = () => {
+    onAddWord(word);
+    toast({
+      title: 'Word Added to Panel',
+      description: `"${word}" has been added to the lookup panel.`,
+    });
+    setIsOpen(false);
+  };
+
+  if (!word.trim()) {
+      return <span>{word}</span>;
+  }
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <span className="cursor-pointer rounded-md px-1 transition-colors hover:bg-primary/20 focus:bg-primary/30 focus:outline-none">
+          {word}
+        </span>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto max-w-sm p-3 text-sm" side="top" align="center">
+        <div className="space-y-2 text-center">
+            <p className="font-semibold text-base">Add this word to the lookup panel?</p>
+            <p className="text-xs text-muted-foreground">The panel will automatically expand it for you.</p>
+            <Button size="sm" className="w-full" onClick={handleAdd}>
+                <Library className="mr-2 h-4 w-4" />
+                Add &quot;{word}&quot;
+            </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+
 export function BookDisplay({ 
     bookResult, 
     isLoading, 
@@ -63,9 +111,13 @@ export function BookDisplay({
     setShowTranslation,
     showSyntax,
     setShowSyntax,
+    onAddWordToPanel,
+    onOpenPanel,
+    pendingWordCount,
 }: BookDisplayProps) {
   const { toast } = useToast();
   const [currentBook, setCurrentBook] = useState<BookData | null>(bookResult?.data || null);
+  const [isWordClick, setIsWordClick] = useState<boolean>(false);
   
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
@@ -172,6 +224,33 @@ export function BookDisplay({
 
   const { title, author, pages, coverIllustrationUri, level, topic, grammarScope } = currentBook;
 
+  const renderParagraphText = (p: {text: string, translation: string}, isClickable: boolean) => {
+    if(isClickable) {
+      return (
+            <>
+            {
+              p.text.split('.').map((s, sIndex, arr) => {
+                const words = s.trim().split(/\s+/).filter(Boolean);
+                return (
+                  <React.Fragment key={sIndex}>
+                    {words.map((w, wIndex) => (
+                      <button key={`${sIndex}-${wIndex}`} className="inline bg-transparent p-0 cursor-pointer">
+                        <WordClickPopover word={w} onAddWord={() => onAddWordToPanel(w.replace(/[.,·;]/g, ''))} />
+                        {wIndex < words.length - 1 ? ' ' : ''}
+                      </button>
+                    ))}
+                    {sIndex < arr.length - 1 ? '. ' : ''}
+                  </React.Fragment>
+                );
+              })
+            }
+            </>
+          )
+    } else {
+      return p.text
+    }
+  }
+
   return (
     <>
       <FootnoteImageModal 
@@ -193,10 +272,19 @@ export function BookDisplay({
                         <Label htmlFor="show-translation" className="flex items-center gap-2 text-sm"><Languages className="h-4 w-4" />Translation</Label>
                     </div>
                      <div className="flex items-center space-x-2">
-                        <Switch id="show-syntax" checked={showSyntax} onCheckedChange={setShowSyntax} />
+                        <Switch id="show-syntax" checked={isWordClick} onCheckedChange={setIsWordClick} />
                         <Label htmlFor="show-syntax" className="flex items-center gap-2 text-sm"><WholeWord className="h-4 w-4" />Analysis</Label>
                     </div>
                 </div>
+              <Button variant="outline" className="relative" onClick={onOpenPanel}>
+                  <Library className="mr-2 h-4 w-4" />
+                  Lookup Panel
+                  {pendingWordCount > 0 && (
+                    <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">
+                      {pendingWordCount}
+                    </Badge>
+                  )}
+              </Button>
               <Button variant="outline" onClick={handleExportJson}>
                   <FileJson className="mr-2 h-4 w-4" />
                   Export
@@ -269,7 +357,9 @@ export function BookDisplay({
                                       <div className="space-y-6">
                                           {page.paragraphs.map((p, pIndex) => (
                                             <div key={pIndex} className="mb-6 last:mb-0">
-                                              <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">{p.text}</p>
+                                              <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">
+                                                {renderParagraphText(p, isWordClick)}
+                                              </p>
                                               {showTranslation && <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>}
                                             </div>
                                           ))}

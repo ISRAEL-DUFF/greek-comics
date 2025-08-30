@@ -52,9 +52,28 @@ async function searchExistingForm(word: string): Promise<{data?: ExpandedWord, e
     let listOfWords: typeof data = []
 
     for(const d of data) {
-      const etymologyRegex = /\*\*(\d+\.\s*)?Etymology\*\*:/i;
-      const regexEx = /\*\*\d+\. Etymology:\*\*\n/; // DO NOT DELETE THIS
-      const relevantPart = d.expansion.split(etymologyRegex)[0];
+      const etymologyRegex = /\*\*(?:\d+\.\s*Etymology:|Etymology:)\*\*/
+      const etymologyRegex1 = /\*\*(\d+\.\s*)?Etymology\*\*:/i;
+      const etymologyRegex2 = /\*\*\d+\.\s*Etymology:\*\*/
+      const etymologyRegex3 = /(\d+\.\s*)?\*{0,2}Etymology\*{0,2}\s*:?\s*/i
+
+      let relevantPart = '';
+      const relevantPart0 = d.expansion.split(etymologyRegex);
+      const relevantPart1 = d.expansion.split(etymologyRegex1);
+      const relevantPart2 = d.expansion.split(etymologyRegex2);
+      const relevantPart3 = d.expansion.split(etymologyRegex3);
+
+      if(relevantPart0.length > 0) {
+        relevantPart = relevantPart0[0];
+      } else if(relevantPart1.length > 0) {
+        relevantPart = relevantPart1[0];
+      } else if(relevantPart2.length > 0) {
+        relevantPart = relevantPart2[0];
+      } else if(relevantPart3.length > 0) {
+        relevantPart = relevantPart3[0];
+      }
+
+      // const relevantPart = d.expansion.split(etymologyRegex)[0];
       const regex = new RegExp(`(^|[^\\p{L}])(${word})(?=[^\\p{L}]|$)`, 'u')
 
       // console.log({

@@ -67,7 +67,7 @@ export function BookGeneratorForm({ setIsLoading, setBookResult, isLoading }: Bo
   };
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg border-0 md:border md:shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline text-2xl">Create Your Book</CardTitle>
         <CardDescription>Fill in the details below to generate a new book.</CardDescription>
