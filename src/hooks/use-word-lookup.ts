@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from './use-toast';
 import { generateAndSaveWordExpansionAction } from '@/app/word-expansion/actions';
 
-const BATCH_SIZE = 3;
+const BATCH_SIZE = 1; // KEEP THIS AT 'ONE' FOR NOW
 
 export type WordStatus = 'pending' | 'loading' | 'ready' | 'error';
 
@@ -32,10 +32,10 @@ export function useWordLookup() {
       .trim();
 
   const addWord = useCallback((word: string) => {
-    const cleanedWord = word.toLowerCase().replace(/[.,·;]/g, '');
+    const cleanedWord = normalizeKey(word) // word.toLowerCase().replace(/[.,·;]/g, '');
     if (!cleanedWord) return;
 
-    // Check current state first and show toast outside of the setState updater
+    // guard against duplicates using current lookupState snapshot (safe here)
     if (lookupState[cleanedWord]) {
       toast({
         title: 'Already in Panel',
@@ -63,94 +63,15 @@ export function useWordLookup() {
     setLookupState({});
   }, []);
 
-  // useEffect(() => {
-  //   const processQueue = async () => {
-  //     const pendingWords = Object.values(lookupState).filter(
-  //       (item) => item.status === 'pending'
-  //     );
+    // DEBUG: watch lookupState updates inside the hook
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('useWordLookup: lookupState changed', lookupState);
+    // eslint-disable-next-line no-console
+    console.log('useWordLookup: pendingCount', Object.values(lookupState).filter(i => i.status === 'pending' || i.status === 'loading').length);
+  }, [lookupState]);
 
-  //     if (pendingWords.length === 0 || isProcessing) {
-  //       return;
-  //     }
-
-  //     setIsProcessing(true);
-  //     const batch = pendingWords.slice(0, BATCH_SIZE).map(item => item.word);
-
-  //     // Set status to 'loading' for the batch
-  //     setLookupState((prev) => {
-  //       const newState = { ...prev };
-  //       batch.forEach(word => {
-  //         if (newState[word]) {
-  //           newState[word].status = 'loading';
-  //         }
-  //       });
-  //       return newState;
-  //     });
-
-  //     try {
-  //       const result = await generateAndSaveWordExpansionAction(batch.join(','));
-        
-  //       if (result.data) {
-  //         setLookupState(prev => {
-  //           const newState = { ...prev };
-  //           result.data?.forEach(expandedWord => {
-  //               const w = expandedWord.word.toLowerCase();
-  //               if(newState[w]) {
-  //                   newState[w].status = 'ready';
-  //                   newState[w].expansion = expandedWord.expansion;
-  //               }
-  //           });
-  //           //  toast({
-  //           //     title: 'Expansion Ready',
-  //           //     description: `Details for "${result.data.map(d => d.word).join(', ')}" are now available.`,
-  //           //  });
-  //           return newState;
-  //         });
-
-  //         toast({
-  //           title: 'Expansion Ready',
-  //           description: `Details for "${result.data.map(d => d.word).join(', ')}" are now available.`,
-  //         });
-  //       }
-        
-  //       // Handle words that might have failed in the batch (if generateAndSaveWordExpansionAction supports partial success reporting)
-  //       if(result.error) {
-  //           console.error("Batch expansion error:", result.error);
-  //           // For now, mark the whole batch as error if the top-level error is set
-  //           setLookupState(prev => {
-  //               const newState = { ...prev };
-  //               batch.forEach(word => {
-  //                   if (newState[word]?.status === 'loading') {
-  //                       newState[word].status = 'error';
-  //                       newState[word].error = result.error;
-  //                   }
-  //               });
-  //               return newState;
-  //           });
-  //       }
-
-  //     } catch (error) {
-  //       console.error('Failed to process word lookup batch:', error);
-  //       setLookupState((prev) => {
-  //         const newState = { ...prev };
-  //         batch.forEach((word) => {
-  //           if (newState[word]) {
-  //             newState[word].status = 'error';
-  //             newState[word].error = 'An unexpected error occurred.';
-  //           }
-  //         });
-  //         return newState;
-  //       });
-  //     } finally {
-  //       setIsProcessing(false);
-  //     }
-  //   };
-
-  //   // Use a timer to check the queue periodically
-  //   const intervalId = setInterval(processQueue, 2000); 
-
-  //   return () => clearInterval(intervalId);
-  // }, [lookupState, isProcessing, toast]);
+  
 useEffect(() => {
     const processQueue = async () => {
       const pendingWords = Object.values(lookupState).filter(
@@ -204,10 +125,22 @@ useEffect(() => {
             const newState = { ...prev };
             result.data?.forEach((expandedWord: any) => {
               const wRaw = expandedWord.word || expandedWord.input || '';
-              const w = normalizeKey(String(wRaw));
-              if (newState[w]) {
-                newState[w] = {
-                  ...newState[w],
+              const normalizedReturned = normalizeKey(String(wRaw));
+
+              // Prefer direct match; fall back to finding a state key whose normalized form matches
+              let targetKey = normalizedReturned;
+              if (!newState[targetKey]) {
+                const found = Object.keys(newState).find(k => normalizeKey(k) === normalizedReturned);
+                if (found) {
+                  targetKey = found;
+                } else {
+                  targetKey = Object.values(batch)[0] // REASONE FOR BATCH SIZE = 1: Fall back to the single item in the batch
+                }
+              }
+
+              if (newState[targetKey]) {
+                newState[targetKey] = {
+                  ...newState[targetKey],
                   status: 'ready',
                   expansion: expandedWord.expansion ?? expandedWord.result ?? '',
                 };

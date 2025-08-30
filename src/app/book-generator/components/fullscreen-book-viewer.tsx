@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel"
 import type { BookData } from '../actions';
-import { ImagePlus, X, BadgeHelp} from 'lucide-react';
+import { ImagePlus, X, BadgeHelp, WholeWord} from 'lucide-react';
 import {
     Popover,
     PopoverContent,
@@ -24,6 +24,8 @@ import { Library } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { WordLookupPanel } from './word-lookup-panel';
 import { LookupState } from '@/hooks/use-word-lookup';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface FullscreenBookViewerProps {
   bookData: BookData;
@@ -88,10 +90,43 @@ export function FullscreenBookViewer({
 }: FullscreenBookViewerProps) {
   const { title, author, pages, coverIllustrationUri } = bookData;
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isWordClick, setIsWordClick] = useState<boolean>(false);
+
+  useEffect(() => {
+       // eslint-disable-next-line no-console
+    console.debug('Fullscreen lookupState changed', lookupState);
+  }, [lookupState]);
+
+  const renderParagraphText = (p: {text: string, translation: string}, isClickable: boolean) => {
+      if(isClickable) {
+        return (
+              <>
+              {
+                p.text.split('.').map((s, sIndex, arr) => {
+                  const words = s.trim().split(/\s+/).filter(Boolean);
+                  return (
+                    <React.Fragment key={sIndex}>
+                      {words.map((w, wIndex) => (
+                        <button key={`${sIndex}-${wIndex}`} className="inline bg-transparent p-0 cursor-pointer">
+                          <WordClickPopover word={w} onAddWord={() => onAddWordToPanel(w.replace(/[.,·;]/g, ''))} />
+                          {wIndex < words.length - 1 ? ' ' : ''}
+                        </button>
+                      ))}
+                      {sIndex < arr.length - 1 ? '. ' : ''}
+                    </React.Fragment>
+                  );
+                })
+              }
+              </>
+            )
+      } else {
+        return p.text
+      }
+    }
 
   return ( 
     <div className="fixed inset-0 bg-background text-foreground z-50 flex flex-col">
-        <WordLookupPanel
+        <WordLookupPanel 
         isOpen={isPanelOpen}
         onOpenChange={setIsPanelOpen}
         lookupState={lookupState}
@@ -108,6 +143,7 @@ export function FullscreenBookViewer({
             </Badge>
             )}
         </Button>
+        <Switch id="show-syntax" checked={isWordClick} onCheckedChange={setIsWordClick} />
         <Button variant="ghost" size="icon" onClick={onExitFullscreen}>
           <X className="h-6 w-6" />
           <span className="sr-only">Exit Fullscreen</span>
@@ -169,20 +205,7 @@ export function FullscreenBookViewer({
                                         {page.paragraphs.map((p, pIndex) => (
                                         <div key={pIndex} className="mb-6 last:mb-0">
                                               <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">
-                                                    {p.text.split('.').map((s, sIndex, arr) => {
-                                                    const words = s.trim().split(/\s+/).filter(Boolean);
-                                                    return (
-                                                        <React.Fragment key={sIndex}>
-                                                        {words.map((w, wIndex) => (
-                                                            <React.Fragment key={`${sIndex}-${wIndex}`}>
-                                                            <WordClickPopover word={w} onAddWord={() => onAddWordToPanel(w.replace(/[.,·;]/g, ''))} />
-                                                            {wIndex < words.length - 1 ? ' ' : ''}
-                                                            </React.Fragment>
-                                                        ))}
-                                                        {sIndex < arr.length - 1 ? '. ' : ''}
-                                                        </React.Fragment>
-                                                    );
-                                                    })}
+                                                    {renderParagraphText(p, isWordClick)}
                                                 </p>
                                               {showTranslation && <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>}
                                         </div>

@@ -117,6 +117,7 @@ export function BookDisplay({
 }: BookDisplayProps) {
   const { toast } = useToast();
   const [currentBook, setCurrentBook] = useState<BookData | null>(bookResult?.data || null);
+  const [isWordClick, setIsWordClick] = useState<boolean>(false);
   
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
@@ -223,6 +224,33 @@ export function BookDisplay({
 
   const { title, author, pages, coverIllustrationUri, level, topic, grammarScope } = currentBook;
 
+  const renderParagraphText = (p: {text: string, translation: string}, isClickable: boolean) => {
+    if(isClickable) {
+      return (
+            <>
+            {
+              p.text.split('.').map((s, sIndex, arr) => {
+                const words = s.trim().split(/\s+/).filter(Boolean);
+                return (
+                  <React.Fragment key={sIndex}>
+                    {words.map((w, wIndex) => (
+                      <button key={`${sIndex}-${wIndex}`} className="inline bg-transparent p-0 cursor-pointer">
+                        <WordClickPopover word={w} onAddWord={() => onAddWordToPanel(w.replace(/[.,·;]/g, ''))} />
+                        {wIndex < words.length - 1 ? ' ' : ''}
+                      </button>
+                    ))}
+                    {sIndex < arr.length - 1 ? '. ' : ''}
+                  </React.Fragment>
+                );
+              })
+            }
+            </>
+          )
+    } else {
+      return p.text
+    }
+  }
+
   return (
     <>
       <FootnoteImageModal 
@@ -244,7 +272,7 @@ export function BookDisplay({
                         <Label htmlFor="show-translation" className="flex items-center gap-2 text-sm"><Languages className="h-4 w-4" />Translation</Label>
                     </div>
                      <div className="flex items-center space-x-2">
-                        <Switch id="show-syntax" checked={showSyntax} onCheckedChange={setShowSyntax} />
+                        <Switch id="show-syntax" checked={isWordClick} onCheckedChange={setIsWordClick} />
                         <Label htmlFor="show-syntax" className="flex items-center gap-2 text-sm"><WholeWord className="h-4 w-4" />Analysis</Label>
                     </div>
                 </div>
@@ -330,20 +358,7 @@ export function BookDisplay({
                                           {page.paragraphs.map((p, pIndex) => (
                                             <div key={pIndex} className="mb-6 last:mb-0">
                                               <p className="text-lg lg:text-xl leading-relaxed font-body lang-grc">
-                                                {p.text.split('.').map((s, sIndex, arr) => {
-                                                  const words = s.trim().split(/\s+/).filter(Boolean);
-                                                  return (
-                                                    <React.Fragment key={sIndex}>
-                                                      {words.map((w, wIndex) => (
-                                                        <React.Fragment key={`${sIndex}-${wIndex}`}>
-                                                          <WordClickPopover word={w} onAddWord={() => onAddWordToPanel(w.replace(/[.,·;]/g, ''))} />
-                                                          {wIndex < words.length - 1 ? ' ' : ''}
-                                                        </React.Fragment>
-                                                      ))}
-                                                      {sIndex < arr.length - 1 ? '. ' : ''}
-                                                    </React.Fragment>
-                                                  );
-                                                })}
+                                                {renderParagraphText(p, isWordClick)}
                                               </p>
                                               {showTranslation && <p className="text-base italic text-muted-foreground mt-2">{p.translation}</p>}
                                             </div>
