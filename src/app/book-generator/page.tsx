@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { BookMarked, PlusCircle } from 'lucide-react';
 import { WordLookupPanel } from './components/word-lookup-panel';
@@ -61,6 +62,10 @@ export default function BookGeneratorPage() {
             showImages={showImages}
             showTranslation={showTranslation}
             onAddWordToPanel={wordLookup.addWord}
+            onOpenPanel={() => setIsPanelOpen(true)}
+            pendingWordCount={wordLookup.pendingCount}
+            lookupState={wordLookup.lookupState}
+           removeWord={wordLookup.removeWord}
         />
     );
   }

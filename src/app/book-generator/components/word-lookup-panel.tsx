@@ -22,6 +22,7 @@ interface WordLookupPanelProps {
   onOpenChange: (isOpen: boolean) => void;
   lookupState: LookupState;
   removeWord: (word: string) => void;
+  dialogClassName?: string;
 }
 
 export function WordLookupPanel({
@@ -29,6 +30,7 @@ export function WordLookupPanel({
   onOpenChange,
   lookupState,
   removeWord,
+  dialogClassName
 }: WordLookupPanelProps) {
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
 
@@ -61,7 +63,7 @@ export function WordLookupPanel({
       />
 
       <Dialog open={isOpen} onOpenChange={handleClosePanel}>
-        <DialogContent className="h-full max-h-[90svh] w-full max-w-4xl flex flex-col">
+        <DialogContent className={`h-full max-h-[90svh] w-full max-w-4xl flex flex-col ${dialogClassName ?? ''}`}>
           <DialogHeader>
             <DialogTitle>Word Lookup Panel</DialogTitle>
             <DialogDescription>
