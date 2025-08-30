@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useTransition, useMemo, Suspense } from 'react';
@@ -58,6 +57,10 @@ function WordExpansionContent() {
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   
+  // Tabs: open generated/selected words in UI tabs (not browser tabs)
+  const [openTabs, setOpenTabs] = useState<ExpandedWord[]>([]);
+  const [activeTabId, setActiveTabId] = useState<number | null>(null);
+
   const { toast } = useToast();
 
   const fetchExpandedWords = async () => {
@@ -90,11 +93,10 @@ function WordExpansionContent() {
           title: 'Expansion Complete',
           description: `Successfully generated details for ${result.data.length} word(s).`,
         });
-        // Select and display the last successfully generated word
-        setCurrentWord(lastWord); 
-        setEditedContent(lastWord.expansion);
-        setWords(''); // Clear input on success
-        fetchExpandedWords(); // Refresh the history list
+        // Open the last generated word in a UI tab and activate it
+        addTabAndActivate(lastWord);
+         setWords(''); // Clear input on success
+         fetchExpandedWords(); // Refresh the history list
       }
     });
   };
@@ -141,6 +143,8 @@ function WordExpansionContent() {
     setCurrentWord(fullWord);
     if(fullWord) {
       setEditedContent(fullWord.expansion);
+      // Open selected history word in a tab
+      addTabAndActivate(fullWord);
     }
     setIsLoadingContent(false);
   };
@@ -172,12 +176,48 @@ function WordExpansionContent() {
                 description: 'Your edits have been successfully saved.',
             });
             setCurrentWord(result.data!);
+            // also update any open tab for this word
+            setOpenTabs(prev => prev.map(t => t.id === result.data!.id ? result.data! : t));
             setIsEditMode(false);
         }
     });
   }
-
+  
   const isLoading = isGenerating || isLoadingContent;
+
+  // Tabs: open generated/selected words in UI tabs (not browser tabs)
+  const addTabAndActivate = (wordItem: ExpandedWord) => {
+    setOpenTabs((prev) => {
+      const exists = prev.find((p) => p.id === wordItem.id);
+      if (exists) return prev;
+      return [...prev, wordItem];
+    });
+    setActiveTabId(wordItem.id);
+    setCurrentWord(wordItem);
+    setEditedContent(wordItem.expansion);
+  };
+
+  const closeTab = (id: number) => {
+    setOpenTabs((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      // if the closed tab was active, pick a sensible next active tab
+      if (activeTabId === id) {
+        const idx = prev.findIndex(p => p.id === id);
+        // prefer previous tab, otherwise next, otherwise null
+        const newActive = (idx > 0 ? prev[idx - 1] : (prev[idx + 1] ?? null));
+        if (newActive) {
+          setActiveTabId(newActive.id);
+          setCurrentWord(newActive);
+          setEditedContent(newActive.expansion);
+        } else {
+          setActiveTabId(null);
+          setCurrentWord(null);
+          setEditedContent('');
+        }
+      }
+      return next;
+    });
+  };
 
   return (
     <>
@@ -274,69 +314,106 @@ function WordExpansionContent() {
             </aside>
             <div className="lg:col-span-8 xl:col-span-9">
               <Card className="min-h-[60vh]">
-                  <CardHeader className="flex-row items-center justify-between">
-                      <div className="space-y-1">
-                          <CardTitle>Analysis</CardTitle>
-                          <CardDescription>
-                              {currentWord ? `Details for "${currentWord.word}"` : 'Select or generate a word to see its analysis.'}
-                          </CardDescription>
+                  <CardHeader className="flex-row items-start justify-between">
+                      <div className="space-y-1 w-full">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <CardTitle>Analysis</CardTitle>
+                              <CardDescription>
+                                {currentWord ? `Details for "${currentWord.word}"` : 'Select or generate a word to see its analysis.'}
+                              </CardDescription>
+                            </div>
+                            {currentWord && !isEditMode && (
+                              <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </Button>
+                            )}
+                          </div>
+
+                          {/* Tabs bar */}
+                          {openTabs.length > 0 && (
+                            <div className="mt-3 flex gap-2 overflow-x-auto pb-2 w-[75vw]">
+                              {openTabs.map(tab => (
+                                <div
+                                  key={tab.id}
+                                  className={cn(
+                                    'flex items-center gap-2 px-3 py-1 rounded-md border',
+                                    activeTabId === tab.id ? 'bg-accent/10 border-accent' : 'bg-transparent border-transparent'
+                                  )}
+                                >
+                                  <button
+                                    className="text-sm font-medium max-w-[28ch] truncate"
+                                    onClick={() => {
+                                      setActiveTabId(tab.id);
+                                      setCurrentWord(tab);
+                                      setEditedContent(tab.expansion);
+                                    }}
+                                  >
+                                    {tab.word}
+                                  </button>
+                                  <button
+                                    className="text-xs text-muted-foreground ml-2"
+                                    onClick={() => closeTab(tab.id)}
+                                    aria-label={`Close ${tab.word}`}
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                       </div>
-                      {currentWord && !isEditMode && (
-                          <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                          </Button>
-                      )}
                   </CardHeader>
-                  <CardContent className="p-2 md:p-6 h-full overflow-x-auto">
-                      {isLoading ? (
-                          <div className="space-y-4 pt-6">
-                              <Skeleton className="h-8 w-1/4" />
-                              <Skeleton className="h-4 w-1/3" />
-                              <div className="space-y-2 pt-4">
-                                  <Skeleton className="h-6 w-full" />
-                                  <Skeleton className="h-6 w-5/6" />
-                                  <Skeleton className="h-6 w-full" />
-                              </div>
-                          </div>
-                      ) : currentWord ? (
-                          isEditMode ? (
-                              <div className="space-y-4">
-                                  <MarkdownEditor
-                                      className='w-[89vw] overflow-x-auto'
-                                      value={editedContent}
-                                      onChange={(value) => setEditedContent(value || '')}
-                                  />
-                                  <div className="flex justify-end gap-2">
-                                      <Button variant="ghost" onClick={() => {
-                                          setIsEditMode(false);
-                                          setEditedContent(currentWord.expansion);
-                                      }}>Cancel</Button>
-                                      <Button onClick={handleSaveChanges} disabled={isSaving}>
-                                          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                          Save Changes
-                                      </Button>
-                                  </div>
-                              </div>
-                          ) : (
-                              <div className="md:w-[64vw] w-[89vw]">
-                                {/* PLEASE DON'T MODIFY THE WIDTH OF THE PARENT COMPONENT OF THIS VIEWER*/}
+                   <CardContent className="p-2 md:p-6 h-full overflow-x-auto">
+                       {isLoading ? (
+                           <div className="space-y-4 pt-6">
+                               <Skeleton className="h-8 w-1/4" />
+                               <Skeleton className="h-4 w-1/3" />
+                               <div className="space-y-2 pt-4">
+                                   <Skeleton className="h-6 w-full" />
+                                   <Skeleton className="h-6 w-5/6" />
+                                   <Skeleton className="h-6 w-full" />
+                               </div>
+                           </div>
+                       ) : currentWord ? (
+                           isEditMode ? (
+                               <div className="space-y-4">
+                                   <MarkdownEditor
+                                       className='w-[89vw] overflow-x-auto'
+                                       value={editedContent}
+                                       onChange={(value) => setEditedContent(value || '')}
+                                   />
+                                   <div className="flex justify-end gap-2">
+                                       <Button variant="ghost" onClick={() => {
+                                           setIsEditMode(false);
+                                           setEditedContent(currentWord.expansion);
+                                       }}>Cancel</Button>
+                                       <Button onClick={handleSaveChanges} disabled={isSaving}>
+                                           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                           Save Changes
+                                       </Button>
+                                   </div>
+                               </div>
+                           ) : (
+                               <div className="md:w-[64vw] w-[89vw]">
+                                 {/* PLEASE DON'T MODIFY THE WIDTH OF THE PARENT COMPONENT OF THIS VIEWER*/}
                                 <MarkdownDisplay markdown={currentWord.expansion} className="w-[98%] overflow-x-auto" />
-                              </div>
-                          )
-                      ) : (
-                          <div className="flex flex-col items-center justify-center p-8 text-center h-full">
-                              <Wand2 className="h-16 w-16 text-muted-foreground/50" />
-                              <h3 className="mt-4 text-xl font-semibold font-headline">
-                                  Analysis will appear here
-                              </h3>
-                              <p className="mt-2 text-muted-foreground">
-                                  Enter a word to begin, or select one from your history.
-                              </p>
-                          </div>
-                      )}
-                  </CardContent>
-              </Card>
+                               </div>
+                           )
+                       ) : (
+                           <div className="flex flex-col items-center justify-center p-8 text-center h-full">
+                               <Wand2 className="h-16 w-16 text-muted-foreground/50" />
+                               <h3 className="mt-4 text-xl font-semibold font-headline">
+                                   Analysis will appear here
+                               </h3>
+                               <p className="mt-2 text-muted-foreground">
+                                   Enter a word to begin, or select one from your history.
+                               </p>
+                           </div>
+                       )}
+                   </CardContent>
+               </Card>
             </div>
           </div>
         </main>
