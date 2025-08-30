@@ -56,21 +56,25 @@ async function searchExistingForm(word: string): Promise<{data?: ExpandedWord, e
       const etymologyRegex1 = /\*\*(\d+\.\s*)?Etymology\*\*:/i;
       const etymologyRegex2 = /\*\*\d+\.\s*Etymology:\*\*/
       const etymologyRegex3 = /(\d+\.\s*)?\*{0,2}Etymology\*{0,2}\s*:?\s*/i
+      const etymologyRegex4 = /^\d+\.\s+\*\*Etymology\*\*:/m
 
       let relevantPart = '';
       const relevantPart0 = d.expansion.split(etymologyRegex);
       const relevantPart1 = d.expansion.split(etymologyRegex1);
       const relevantPart2 = d.expansion.split(etymologyRegex2);
       const relevantPart3 = d.expansion.split(etymologyRegex3);
+      const relevantPart4 = d.expansion.split(etymologyRegex4);
 
-      if(relevantPart0.length > 0) {
+      if(relevantPart0.length > 1) {
         relevantPart = relevantPart0[0];
-      } else if(relevantPart1.length > 0) {
+      } else if(relevantPart1.length > 1) {
         relevantPart = relevantPart1[0];
-      } else if(relevantPart2.length > 0) {
+      } else if(relevantPart2.length > 1) {
         relevantPart = relevantPart2[0];
-      } else if(relevantPart3.length > 0) {
+      } else if(relevantPart3.length > 1) {
         relevantPart = relevantPart3[0];
+      } else if(relevantPart4.length > 1) {
+        relevantPart = relevantPart4[0];
       }
 
       // const relevantPart = d.expansion.split(etymologyRegex)[0];

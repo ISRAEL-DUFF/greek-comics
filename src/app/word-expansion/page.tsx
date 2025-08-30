@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useTransition, useMemo, Suspense } from 'react';
@@ -24,6 +23,7 @@ import { MarkdownEditor } from '@/components/markdown-editor';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WordSearchModal } from './components/word-search-modal';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const greekNormalization = {
   normalizeGreek: (lemma: string) =>{
@@ -57,7 +57,54 @@ function WordExpansionContent() {
   const [editedContent, setEditedContent] = useState('');
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const [isExpandModalOpen, setIsExpandModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   
+  // Tabs: open generated/selected words in UI tabs (not browser tabs)
+  const [openTabs, setOpenTabs] = useState<ExpandedWord[]>([]);
+  const [activeTabId, setActiveTabId] = useState<number | null>(null);
+
+  // Local storage key (bump version if shape changes in future)
+  const OPEN_TABS_LS_KEY = 'wordExpansion.openTabs.v1';
+
+  // Restore open tabs from localStorage on first render
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(OPEN_TABS_LS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Basic validation of parsed items (id and word expected)
+          const validTabs = parsed.filter((p: any) => p && typeof p.id === 'number' && typeof p.word === 'string');
+          if (validTabs.length > 0) {
+            setOpenTabs(validTabs);
+            // restore last active tab (prefer last used)
+            const restoredActive = validTabs.find((t: any) => t.id === (activeTabId ?? validTabs[validTabs.length - 1].id)) ?? validTabs[validTabs.length - 1];
+            setActiveTabId(restoredActive.id);
+            setCurrentWord(restoredActive);
+            setEditedContent(restoredActive.expansion ?? '');
+          }
+        }
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed to restore open tabs from localStorage', err);
+    }
+    // only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist openTabs to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(OPEN_TABS_LS_KEY, JSON.stringify(openTabs));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed to persist open tabs to localStorage', err);
+    }
+  }, [openTabs]);
+
   const { toast } = useToast();
 
   const fetchExpandedWords = async () => {
@@ -90,11 +137,10 @@ function WordExpansionContent() {
           title: 'Expansion Complete',
           description: `Successfully generated details for ${result.data.length} word(s).`,
         });
-        // Select and display the last successfully generated word
-        setCurrentWord(lastWord); 
-        setEditedContent(lastWord.expansion);
-        setWords(''); // Clear input on success
-        fetchExpandedWords(); // Refresh the history list
+        // Open the last generated word in a UI tab and activate it
+        addTabAndActivate(lastWord);
+         setWords(''); // Clear input on success
+         fetchExpandedWords(); // Refresh the history list
       }
     });
   };
@@ -141,6 +187,8 @@ function WordExpansionContent() {
     setCurrentWord(fullWord);
     if(fullWord) {
       setEditedContent(fullWord.expansion);
+      // Open selected history word in a tab
+      addTabAndActivate(fullWord);
     }
     setIsLoadingContent(false);
   };
@@ -172,12 +220,48 @@ function WordExpansionContent() {
                 description: 'Your edits have been successfully saved.',
             });
             setCurrentWord(result.data!);
+            // also update any open tab for this word
+            setOpenTabs(prev => prev.map(t => t.id === result.data!.id ? result.data! : t));
             setIsEditMode(false);
         }
     });
   }
-
+  
   const isLoading = isGenerating || isLoadingContent;
+
+  // Tabs: open generated/selected words in UI tabs (not browser tabs)
+  const addTabAndActivate = (wordItem: ExpandedWord) => {
+    setOpenTabs((prev) => {
+      const exists = prev.find((p) => p.id === wordItem.id);
+      if (exists) return prev;
+      return [...prev, wordItem];
+    });
+    setActiveTabId(wordItem.id);
+    setCurrentWord(wordItem);
+    setEditedContent(wordItem.expansion);
+  };
+
+  const closeTab = (id: number) => {
+    setOpenTabs((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      // if the closed tab was active, pick a sensible next active tab
+      if (activeTabId === id) {
+        const idx = prev.findIndex(p => p.id === id);
+        // prefer previous tab, otherwise next, otherwise null
+        const newActive = (idx > 0 ? prev[idx - 1] : (prev[idx + 1] ?? null));
+        if (newActive) {
+          setActiveTabId(newActive.id);
+          setCurrentWord(newActive);
+          setEditedContent(newActive.expansion);
+        } else {
+          setActiveTabId(null);
+          setCurrentWord(null);
+          setEditedContent('');
+        }
+      }
+      return next;
+    });
+  };
 
   return (
     <>
@@ -193,7 +277,98 @@ function WordExpansionContent() {
             <p className="mt-1 text-lg text-muted-foreground">Detailed Greek Word Analysis</p>
           </div>
           <div className="grid gap-12 lg:grid-cols-12">
-            <aside className="lg:col-span-4 xl:col-span-3">
+            {/* <aside className="lg:col-span-4 xl:col-span-3">
+              <div className="sticky top-24 space-y-8">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Expand Word(s)</CardTitle>
+                    <CardDescription>Enter Greek words, comma-separated.</CardDescription>
+                  </CardHeader>
+                  <form onSubmit={handleGenerateSubmit}>
+                    <CardContent>
+                      <Textarea
+                        placeholder="e.g., λόγος, ἀγαθός, λύω"
+                        value={words}
+                        onChange={(e) => setWords(e.target.value)}
+                        disabled={isGenerating}
+                        className="font-body text-base min-h-[60px]"
+                      />
+                    </CardContent>
+                    <CardFooter>
+                      <Button type="submit" disabled={isGenerating || !words.trim()} className="w-full">
+                        {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                        {isGenerating ? 'Generating...' : 'Generate'}
+                      </Button>
+                    </CardFooter>
+                  </form>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>History</CardTitle>
+                        <CardDescription>Previously expanded words.</CardDescription>
+                      </div>
+                      <Button variant="outline" size="icon" onClick={() => setIsSearchOpen(true)} aria-label="Search within expansions">
+                        <Search className="h-4 w-4" />
+                        <span className="sr-only">Search Expansions</span>
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                      <ScrollArea className="h-96">
+                          {isLoadingList ? (
+                              <div className="space-y-2 pr-4">
+                                  {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                              </div>
+                          ) : Object.keys(groupedAndSortedWords).length > 0 ? (
+                              <Accordion type="multiple" className="w-full pr-4">
+                                {Object.entries(groupedAndSortedWords).map(([letter, words]) => (
+                                    <AccordionItem value={letter} key={letter}>
+                                        <AccordionTrigger className="font-headline text-lg">{letter}</AccordionTrigger>
+                                        <AccordionContent>
+                                            <div className="space-y-1 pl-2">
+                                                {words.map((item) => (
+                                                    <Button
+                                                        key={item.id}
+                                                        variant={currentWord?.id === item.id ? 'secondary' : 'ghost'}
+                                                        className={cn(
+                                                            'w-full justify-start h-auto py-1.5 px-2 text-left font-body text-base font-normal',
+                                                            currentWord?.id === item.id && 'bg-accent/20'
+                                                        )}
+                                                        onClick={() => handleSelectWord(item)}
+                                                    >
+                                                        {item.word}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                            </Accordion>
+                          ) : (
+                              <div className="text-center text-muted-foreground p-4 text-sm h-full flex items-center justify-center">
+                                  <p>No words expanded yet.</p>
+                              </div>
+                          )}
+                      </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
+            </aside> */}
+
+            {/* MOBILE: show two buttons that open modals */}
+            <div className="lg:hidden mb-6 flex gap-3 justify-center">
+              <Button onClick={() => setIsExpandModalOpen(true)} className="flex-1 max-w-xs">
+                Expand Word(s)
+              </Button>
+              <Button variant="outline" onClick={() => setIsHistoryModalOpen(true)} className="flex-1 max-w-xs">
+                History
+              </Button>
+            </div>
+
+            {/* Desktop sidebar */}
+            <aside className="hidden lg:block lg:col-span-4 xl:col-span-3">
               <div className="sticky top-24 space-y-8">
                 <Card>
                   <CardHeader>
@@ -272,71 +447,199 @@ function WordExpansionContent() {
                 </Card>
               </div>
             </aside>
+
+            {/* Expand modal (mobile) */}
+            <Dialog open={isExpandModalOpen} onOpenChange={setIsExpandModalOpen}>
+              <DialogContent className="m-0 h-full w-full max-h-[100svh] flex flex-col p-4 sm:rounded-lg sm:m-auto sm:max-w-lg sm:max-h-[90svh]">
+                <DialogHeader>
+                  <DialogTitle>Expand Word(s)</DialogTitle>
+                </DialogHeader>
+                <div className="flex-1 overflow-auto mt-4 pt-4">
+                  <Card>
+                    <form onSubmit={(e) => { e.preventDefault(); handleGenerate(words); setIsExpandModalOpen(false); }}>
+                      <CardContent>
+                        <Textarea
+                          placeholder="e.g., λόγος, ἀγαθός, λύω"
+                          value={words}
+                          onChange={(e) => setWords(e.target.value)}
+                          disabled={isGenerating}
+                          className="font-body text-base min-h-[60px] mt-6"
+                        />
+                      </CardContent>
+                      <CardFooter>
+                        <Button type="submit" disabled={isGenerating || !words.trim()} className="w-full">
+                          {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                          {isGenerating ? 'Generating...' : 'Generate'}
+                        </Button>
+                      </CardFooter>
+                    </form>
+                  </Card>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* History modal (mobile) */}
+            <Dialog open={isHistoryModalOpen} onOpenChange={setIsHistoryModalOpen}>
+              <DialogContent className="m-0 h-full w-full max-h-[100svh] flex flex-col p-4 sm:rounded-lg sm:m-auto sm:max-w-lg sm:max-h-[90svh]">
+                <DialogHeader>
+                  <DialogTitle>History</DialogTitle>
+                </DialogHeader>
+                <div className="flex-1 overflow-auto mt-2">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <CardDescription>Previously expanded words.</CardDescription>
+                        </div>
+                        <Button variant="outline" size="icon" onClick={() => { setIsSearchOpen(true); setIsHistoryModalOpen(false); }} aria-label="Search within expansions">
+                          <Search className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[60vh]">
+                        {isLoadingList ? (
+                          <div className="space-y-2 pr-4">
+                            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                          </div>
+                        ) : Object.keys(groupedAndSortedWords).length > 0 ? (
+                          <Accordion type="multiple" className="w-full pr-4">
+                            {Object.entries(groupedAndSortedWords).map(([letter, words]) => (
+                              <AccordionItem value={letter} key={letter}>
+                                <AccordionTrigger className="font-headline text-lg">{letter}</AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="space-y-1 pl-2">
+                                    {words.map((item) => (
+                                      <Button
+                                        key={item.id}
+                                        variant={currentWord?.id === item.id ? 'secondary' : 'ghost'}
+                                        className={cn(
+                                          'w-full justify-start h-auto py-1.5 px-2 text-left font-body text-base font-normal',
+                                          currentWord?.id === item.id && 'bg-accent/20'
+                                        )}
+                                        onClick={() => { handleSelectWord(item); setIsHistoryModalOpen(false); }}
+                                      >
+                                        {item.word}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                          </Accordion>
+                        ) : (
+                          <div className="text-center text-muted-foreground p-4 text-sm h-full flex items-center justify-center">
+                            <p>No words expanded yet.</p>
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </div>
+              </DialogContent>
+            </Dialog>
             <div className="lg:col-span-8 xl:col-span-9">
               <Card className="min-h-[60vh]">
-                  <CardHeader className="flex-row items-center justify-between">
-                      <div className="space-y-1">
-                          <CardTitle>Analysis</CardTitle>
-                          <CardDescription>
-                              {currentWord ? `Details for "${currentWord.word}"` : 'Select or generate a word to see its analysis.'}
-                          </CardDescription>
+                  <CardHeader className="flex-row items-start justify-between">
+                      <div className="space-y-1 w-full">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <CardTitle>Analysis</CardTitle>
+                              <CardDescription>
+                                {currentWord ? `Details for "${currentWord.word}"` : 'Select or generate a word to see its analysis.'}
+                              </CardDescription>
+                            </div>
+                            {currentWord && !isEditMode && (
+                              <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </Button>
+                            )}
+                          </div>
+
+                          {/* Tabs bar */}
+                          {openTabs.length > 0 && (
+                            <div className="mt-3 flex gap-2 overflow-x-auto pb-2 w-[75vw]">
+                              {openTabs.map(tab => (
+                                <div
+                                  key={tab.id}
+                                  className={cn(
+                                    'flex items-center gap-2 px-3 py-1 rounded-md border',
+                                    activeTabId === tab.id ? 'bg-accent/10 border-accent' : 'bg-transparent border-transparent'
+                                  )}
+                                >
+                                  <button
+                                    className="text-sm font-medium max-w-[28ch] truncate"
+                                    onClick={() => {
+                                      setActiveTabId(tab.id);
+                                      setCurrentWord(tab);
+                                      setEditedContent(tab.expansion);
+                                    }}
+                                  >
+                                    {tab.word}
+                                  </button>
+                                  <button
+                                    className="text-xs text-muted-foreground ml-2"
+                                    onClick={() => closeTab(tab.id)}
+                                    aria-label={`Close ${tab.word}`}
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                       </div>
-                      {currentWord && !isEditMode && (
-                          <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                          </Button>
-                      )}
                   </CardHeader>
-                  <CardContent className="p-2 md:p-6 h-full overflow-x-auto">
-                      {isLoading ? (
-                          <div className="space-y-4 pt-6">
-                              <Skeleton className="h-8 w-1/4" />
-                              <Skeleton className="h-4 w-1/3" />
-                              <div className="space-y-2 pt-4">
-                                  <Skeleton className="h-6 w-full" />
-                                  <Skeleton className="h-6 w-5/6" />
-                                  <Skeleton className="h-6 w-full" />
-                              </div>
-                          </div>
-                      ) : currentWord ? (
-                          isEditMode ? (
-                              <div className="space-y-4">
-                                  <MarkdownEditor
-                                      className='w-[89vw] overflow-x-auto'
-                                      value={editedContent}
-                                      onChange={(value) => setEditedContent(value || '')}
-                                  />
-                                  <div className="flex justify-end gap-2">
-                                      <Button variant="ghost" onClick={() => {
-                                          setIsEditMode(false);
-                                          setEditedContent(currentWord.expansion);
-                                      }}>Cancel</Button>
-                                      <Button onClick={handleSaveChanges} disabled={isSaving}>
-                                          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                          Save Changes
-                                      </Button>
-                                  </div>
-                              </div>
-                          ) : (
-                              <div className="md:w-[64vw] w-[89vw]">
-                                {/* PLEASE DON'T MODIFY THE WIDTH OF THE PARENT COMPONENT OF THIS VIEWER*/}
+                   <CardContent className="p-2 md:p-6 h-full overflow-x-auto">
+                       {isLoading ? (
+                           <div className="space-y-4 pt-6">
+                               <Skeleton className="h-8 w-1/4" />
+                               <Skeleton className="h-4 w-1/3" />
+                               <div className="space-y-2 pt-4">
+                                   <Skeleton className="h-6 w-full" />
+                                   <Skeleton className="h-6 w-5/6" />
+                                   <Skeleton className="h-6 w-full" />
+                               </div>
+                           </div>
+                       ) : currentWord ? (
+                           isEditMode ? (
+                               <div className="space-y-4">
+                                   <MarkdownEditor
+                                       className='w-[89vw] overflow-x-auto'
+                                       value={editedContent}
+                                       onChange={(value) => setEditedContent(value || '')}
+                                   />
+                                   <div className="flex justify-end gap-2">
+                                       <Button variant="ghost" onClick={() => {
+                                           setIsEditMode(false);
+                                           setEditedContent(currentWord.expansion);
+                                       }}>Cancel</Button>
+                                       <Button onClick={handleSaveChanges} disabled={isSaving}>
+                                           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                           Save Changes
+                                       </Button>
+                                   </div>
+                               </div>
+                           ) : (
+                               <div className="md:w-[64vw] w-[89vw]">
+                                 {/* PLEASE DON'T MODIFY THE WIDTH OF THE PARENT COMPONENT OF THIS VIEWER*/}
                                 <MarkdownDisplay markdown={currentWord.expansion} className="w-[98%] overflow-x-auto" />
-                              </div>
-                          )
-                      ) : (
-                          <div className="flex flex-col items-center justify-center p-8 text-center h-full">
-                              <Wand2 className="h-16 w-16 text-muted-foreground/50" />
-                              <h3 className="mt-4 text-xl font-semibold font-headline">
-                                  Analysis will appear here
-                              </h3>
-                              <p className="mt-2 text-muted-foreground">
-                                  Enter a word to begin, or select one from your history.
-                              </p>
-                          </div>
-                      )}
-                  </CardContent>
-              </Card>
+                               </div>
+                           )
+                       ) : (
+                           <div className="flex flex-col items-center justify-center p-8 text-center h-full">
+                               <Wand2 className="h-16 w-16 text-muted-foreground/50" />
+                               <h3 className="mt-4 text-xl font-semibold font-headline">
+                                   Analysis will appear here
+                               </h3>
+                               <p className="mt-2 text-muted-foreground">
+                                   Enter a word to begin, or select one from your history.
+                               </p>
+                           </div>
+                       )}
+                   </CardContent>
+               </Card>
             </div>
           </div>
         </main>
