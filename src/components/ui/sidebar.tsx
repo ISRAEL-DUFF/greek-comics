@@ -650,10 +650,14 @@ const SidebarMenuSkeleton = React.forwardRef<
     showIcon?: boolean
   }
 >(({ className, showIcon = false, ...props }, ref) => {
-  // Random width between 50 to 90%.
-  const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`
-  }, [])
+  // To fix the hydration error, we'll use state and useEffect to set the random width on the client side only.
+  const [width, setWidth] = React.useState("80%"); // Default width for SSR
+
+  React.useEffect(() => {
+    // This will only run on the client, after hydration
+    setWidth(`${Math.floor(Math.random() * 40) + 50}%`);
+  }, []); // Empty dependency array ensures this runs once on mount
+
 
   return (
     <div
