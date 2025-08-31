@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useTransition } from 'react';
@@ -55,6 +54,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useNoteTabs } from './note-tabs-provider';
 
 // Type definitions for folder structure
 interface FolderNode {
@@ -73,6 +73,7 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
   const pathname = usePathname();
   const { toast } = useToast();
   const router = useRouter();
+  const { openTab } = useNoteTabs();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -170,7 +171,11 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
 
   const NoteListItem = ({ note }: { note: Note }) => (
     <SidebarMenuItem>
-      <Link href={`/notes/${note.id}`} className="w-full">
+      {/* open via tabs provider so the tab UI is used and route sync happens */}
+      <button
+        className="w-full text-left"
+        onClick={() => openTab({ id: note.id, title: note.title, content: note.content })}
+      >
         <SidebarMenuButton
           isActive={pathname === `/notes/${note.id}`}
           className="h-auto flex-col items-start"
@@ -185,53 +190,54 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
             {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
           </span>
         </SidebarMenuButton>
-      </Link>
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7">
-                    <MoreVertical className="h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                        <DropdownMenuSubContent>
-                            <DropdownMenuItem onClick={() => handleMoveNote(note.id, null)}>
-                                Unfiled Notes
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {allFolderPaths.sort().map(path => (
-                                <DropdownMenuItem key={path} onClick={() => handleMoveNote(note.id, path)}>
-                                    {path.replace(/:/g, ' / ')}
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                </DropdownMenuSub>
+      </button>
+      {/* keep dropdown actions unchanged */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem onClick={() => handleMoveNote(note.id, null)}>
+                  Unfiled Notes
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                       <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                           <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                           <span className="text-destructive">Delete</span>
-                       </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete this note.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteNote(note.id)}>Delete</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </DropdownMenuContent>
-        </DropdownMenu>
+                {allFolderPaths.sort().map(path => (
+                  <DropdownMenuItem key={path} onClick={() => handleMoveNote(note.id, path)}>
+                    {path.replace(/:/g, ' / ')}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+               <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                   <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                   <span className="text-destructive">Delete</span>
+               </DropdownMenuItem>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete this note.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleDeleteNote(note.id)}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </SidebarMenuItem>
   );
 
@@ -365,4 +371,3 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
   );
 }
 
-  
