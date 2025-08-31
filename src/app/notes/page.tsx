@@ -16,6 +16,7 @@ import {
 import './notes.css';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function NotesPage() {
   const [allNotes, setAllNotes] = useState<Note[]>([]);
