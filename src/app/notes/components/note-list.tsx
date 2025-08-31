@@ -2,10 +2,9 @@
 'use client';
 
 import { useState, useMemo, useTransition } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { type Note, createNote, deleteNote, updateNote } from '../actions';
-import { Folder as FolderIcon, Trash2, FilePlus, MoreVertical, Pencil, FolderPlus, X } from 'lucide-react';
+import { Folder as FolderIcon, Trash2, FilePlus, MoreVertical, FolderPlus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import {
   SidebarGroup,
@@ -15,6 +14,7 @@ import {
   SidebarMenuButton,
   SidebarHeader,
   SidebarInput,
+  SidebarMenuSkeleton,
 } from '@/components/ui/sidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +30,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
   Dialog,
@@ -67,12 +66,14 @@ type FolderTree = Record<string, FolderNode>;
 
 interface NoteListProps {
   notes: Note[];
+  isLoading: boolean;
+  onSelectNote: (noteId: number) => void;
+  onNoteCreated: (note: Note) => void;
+  onNoteDeleted: (noteId: number) => void;
 }
 
-export function NoteList({ notes: initialNotes }: NoteListProps) {
-  const pathname = usePathname();
+export function NoteList({ notes: initialNotes, isLoading, onSelectNote, onNoteCreated, onNoteDeleted }: NoteListProps) {
   const { toast } = useToast();
-  const router = useRouter();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -84,7 +85,7 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
         title: 'Note Created',
         description: 'A new note has been created.',
       });
-      router.push(`/notes/${newNote.id}`);
+      onNoteCreated(newNote);
     } else {
         toast({
             variant: 'destructive',
@@ -99,10 +100,7 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
     toast({
         title: 'Note Deleted',
     });
-    // If the deleted note was the one being viewed, navigate back to the base notes page
-    if (pathname.includes(`/notes/${noteId}`)) {
-        router.push('/notes');
-    }
+    onNoteDeleted(noteId);
   }
 
   const handleMoveNote = async (noteId: number, folderPath: string | null) => {
@@ -170,9 +168,8 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
 
   const NoteListItem = ({ note }: { note: Note }) => (
     <SidebarMenuItem>
-      <Link href={`/notes/${note.id}`} className="w-full">
-        <SidebarMenuButton
-          isActive={pathname === `/notes/${note.id}`}
+      <SidebarMenuButton
+          onClick={() => onSelectNote(note.id)}
           className="h-auto flex-col items-start"
         >
           <span className="font-semibold">{note.title || 'Untitled Note'}</span>
@@ -185,7 +182,6 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
             {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
           </span>
         </SidebarMenuButton>
-      </Link>
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7">
@@ -212,9 +208,9 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
                 <DropdownMenuSeparator />
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                       <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                           <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                           <span className="text-destructive">Delete</span>
+                       <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                           <Trash2 className="mr-2 h-4 w-4" />
+                           <span>Delete</span>
                        </DropdownMenuItem>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -226,7 +222,7 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteNote(note.id)}>Delete</AlertDialogAction>
+                            <AlertDialogAction onClick={() => handleDeleteNote(note.id)} className='bg-destructive hover:bg-destructive/90'>Delete</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
@@ -332,7 +328,6 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
                         onDone={(path) => {
                             handleCreateNote(path);
                             // This is a bit of a hack to close the dialog programmatically.
-                            // A more robust solution might involve controlling the dialog's open state.
                             document.querySelector('[data-radix-dialog-close]')?.dispatchEvent(new MouseEvent('click'));
                         }} 
                     />
@@ -343,6 +338,11 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
       
       <ScrollArea className="flex-1 -mx-2">
         <SidebarGroupContent className="p-2">
+            {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                    <SidebarMenuSkeleton key={i} />
+                ))
+            ) : (
             <Accordion type="multiple" defaultValue={['unfiled-notes', ...allFolderPaths]} className="w-full">
                 {/* Unfiled Notes Section */}
                 <AccordionItem value="unfiled-notes">
@@ -359,10 +359,9 @@ export function NoteList({ notes: initialNotes }: NoteListProps) {
                 </AccordionItem>
                 <FolderRenderer nodes={folderTree} />
             </Accordion>
+            )}
         </SidebarGroupContent>
       </ScrollArea>
     </SidebarGroup>
   );
 }
-
-  
