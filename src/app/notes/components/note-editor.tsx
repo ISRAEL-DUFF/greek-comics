@@ -1,89 +1,105 @@
 
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition, useRef } from 'react';
 import { type Note, updateNote } from '../actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { useDebounce } from 'use-debounce';
 import { MarkdownEditor } from '@/components/markdown-editor';
 import { Badge } from '@/components/ui/badge';
-import { X, Edit, Save } from 'lucide-react';
+import { X, Edit, Save, Check, Loader2 } from 'lucide-react';
 import { MarkdownDisplay } from '@/components/markdown-display';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface NoteEditorProps {
   note: Note | null;
-  isLoading: boolean;
+  onNoteUpdated: (note: Note) => void;
 }
 
-export function NoteEditor({ note, isLoading }: NoteEditorProps) {
+export function NoteEditor({ note, onNoteUpdated }: NoteEditorProps) {
   const [title, setTitle] = useState(note?.title || '');
   const [content, setContent] = useState(note?.content || '');
   const [tags, setTags] = useState<string[]>(note?.tags || []);
   const [tagInput, setTagInput] = useState('');
   
   const [isEditMode, setIsEditMode] = useState(false);
-  const [shouldSave, setShouldSave] = useState(false);
-
+  
   const [isSaving, startSavingTransition] = useTransition();
+  const { toast } = useToast();
 
-  const [debouncedContent] = useDebounce(content, 500);
-  const [debouncedTitle] = useDebounce(title, 500);
-  const [debouncedTags] = useDebounce(tags, 500);
+  const [debouncedContent] = useDebounce(content, 1000);
+  const [debouncedTitle] = useDebounce(title, 1000);
+  const [debouncedTags] = useDebounce(tags, 1000);
+
+  const prevNoteId = useRef(note?.id);
   
   // Effect to reset state when a new note is selected
   useEffect(() => {
     if (note) {
-      setTitle(note.title || '');
-      setContent(note.content || '');
-      setTags(note.tags || []);
-      // When a new note is selected, exit edit mode
-      // setIsEditMode(false); 
+      if (note.id !== prevNoteId.current) {
+        setTitle(note.title || '');
+        setContent(note.content || '');
+        setTags(note.tags || []);
+        setIsEditMode(false); // Reset edit mode when note changes
+        prevNoteId.current = note.id;
+      }
     }
   }, [note]);
   
-  const handleAutoSaveChanges = () => {
+  const handleSaveChanges = (field?: 'title' | 'content' | 'tags') => {
     if (!note) return;
      startSavingTransition(() => {
-        updateNote({
+        const updatedFields: Partial<Note> = {
           id: note.id,
           title: title,
           content: content,
           tags: tags,
-        }).then(() => {
-          setIsEditMode(true);
+        };
+
+        updateNote(updatedFields).then(() => {
+            const updatedNote: Note = { ...note, ...updatedFields };
+            onNoteUpdated(updatedNote);
+            if (field !== 'content') {
+                toast({
+                  title: (
+                    <div className="flex items-center">
+                      <Check className="mr-2 h-4 w-4 text-green-500" /> Saved
+                    </div>
+                  ),
+                  duration: 2000,
+                });
+            }
         });
       });
   }
 
   // Effect to auto-save changes on debounced values
   useEffect(() => {
-    if (
-      note &&
-      isEditMode &&
-      (debouncedContent !== note.content ||
-        debouncedTitle !== note.title ||
-        JSON.stringify(debouncedTags) !== JSON.stringify(note.tags))
-    ) {
-      // Disable auto save for now
-      // handleAutoSaveChanges();
-      console.log('Auto saving...')
+    if (note && isEditMode) {
+        if (debouncedTitle !== note.title) {
+            handleSaveChanges('title');
+        }
     }
-  }, [debouncedContent, debouncedTitle, debouncedTags, note, isEditMode]);
+  }, [debouncedTitle, note, isEditMode]);
+  
+   useEffect(() => {
+    if (note && isEditMode) {
+        if (debouncedContent !== note.content) {
+            handleSaveChanges('content');
+        }
+    }
+  }, [debouncedContent, note, isEditMode]);
+  
+   useEffect(() => {
+    if (note && isEditMode) {
+        if (JSON.stringify(debouncedTags) !== JSON.stringify(note.tags)) {
+            handleSaveChanges('tags');
+        }
+    }
+  }, [debouncedTags, note, isEditMode]);
 
-  const handleSaveChanges = () => {
-    if (!note) return;
-     startSavingTransition(() => {
-        updateNote({
-          id: note.id,
-          title: title,
-          content: content,
-          tags: tags,
-        });
-        setIsEditMode(false);
-      });
-  }
 
   const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.value.includes(',')) {
@@ -115,22 +131,10 @@ export function NoteEditor({ note, isLoading }: NoteEditorProps) {
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
-
-  if (isLoading) {
-    return (
-      <div className="p-8 space-y-4">
-        <Skeleton className="h-10 w-1/2" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-3/4" />
-      </div>
-    );
-  }
-
   if (!note) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
-        <p>Select a note to view or create a new one.</p>
+      <div className="flex h-full items-center justify-center text-muted-foreground p-4 text-center">
+        <p>Select a note from the sidebar to view, or create a new one.</p>
       </div>
     );
   }
@@ -139,23 +143,19 @@ export function NoteEditor({ note, isLoading }: NoteEditorProps) {
     <div className="p-1 md:p-4 h-full flex flex-col">
        <div className="flex items-center justify-between h-10 mb-2">
         <div className="flex items-center gap-2">
-           {isSaving && <p className="text-xs text-muted-foreground">Saving...</p>}
+           {isSaving && (
+            <div className="flex items-center text-xs text-muted-foreground">
+                <Loader2 className="mr-1 h-3 w-3 animate-spin"/>
+                Saving...
+            </div>
+           )}
         </div>
         <div className="flex items-center gap-2">
           {isEditMode ? (
-            <>
-              <Button variant="ghost" onClick={() => {
-                setIsEditMode(false);
-                // Reset state to original note state on cancel
-                setTitle(note.title);
-                setContent(note.content || '');
-                setTags(note.tags || []);
-              }}>Cancel</Button>
-              <Button onClick={handleSaveChanges} disabled={isSaving}>
-                <Save className="mr-2 h-4 w-4" />
-                Save & Exit
+            <Button variant="outline" onClick={() => setIsEditMode(false)}>
+                <Check className="mr-2 h-4 w-4" />
+                Done
               </Button>
-            </>
           ) : (
             <Button variant="outline" onClick={() => setIsEditMode(true)}>
               <Edit className="mr-2 h-4 w-4" />
@@ -190,31 +190,33 @@ export function NoteEditor({ note, isLoading }: NoteEditorProps) {
                 value={tagInput}
                 onChange={handleTagInputChange}
                 onKeyDown={handleTagInputKeyDown}
-                placeholder="Add tags (comma-separated)..."
+                placeholder="Add tags..."
                 className="flex-1 h-8 min-w-[150px] border-none shadow-none focus-visible:ring-0 p-0"
               />
           </div>
         </>
       ) : (
         <>
-          <h1 className="text-3xl mx-auto font-bold p-0 mb-2">{title}</h1>
-          <div className="mb-4 mx-auto flex flex-wrap items-center gap-2">
-            {tags.map((tag) => (
-              <Badge key={tag} variant="secondary">
-                {tag}
-              </Badge>
-            ))}
-          </div>
+          <h1 className="text-3xl font-bold p-0 mb-2 break-words">{title}</h1>
+          {tags.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="secondary">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
         </>
       )}
 
 
-      <div className="flex-grow h-full min-h-0 md:w-[82vw] overflow-x-auto">
+      <div className="flex-grow h-full min-h-0 overflow-hidden">
          {isEditMode ? (
-            <MarkdownEditor className='w-[82vw] overflow-x-auto' value={content} onChange={(value) => setContent(value || '')} />
+            <MarkdownEditor className='h-full' value={content} onChange={(value) => setContent(value || '')} />
          ) : (
             <div className="p-1 h-full prose-sm prose-p:font-body max-w-none">
-              <MarkdownDisplay markdown={content} className="w-[80vw] mx-auto overflow-x-auto" markdownClassName = "prose prose-sm prose-p:font-body prose-headings:font-headline max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2 overflow-x-auto" />
+              <MarkdownDisplay markdown={content} className="w-[98%] overflow-x-auto" markdownClassName = "prose prose-sm prose-p:font-body prose-headings:font-headline max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2 overflow-x-auto" />
             </div>
          )}
       </div>
