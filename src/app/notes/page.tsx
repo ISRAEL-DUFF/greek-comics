@@ -159,12 +159,11 @@ export default function NotesPage() {
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b px-4 backdrop-blur-sm sm:justify-end">
           <SidebarTrigger className="md:hidden" />
           {/* Header actions can go here */}
-        </header>
-        <main className="flex-1 overflow-auto notes-background flex flex-col">
+
           {/* Tabs Bar */}
           {openTabs.length > 0 && (
-            <div className="flex-shrink-0 border-b bg-background/80 backdrop-blur-sm">
-                <ScrollArea orientation='horizontal' className='w-full'>
+            <div className="flex-shrink-0 border-b backdrop-blur-sm">
+                <ScrollArea className='w-[80vw] scroll-both'>
                     <div className="flex items-center gap-1 p-1">
                         {openTabs.map(tab => (
                             <div
@@ -193,6 +192,41 @@ export default function NotesPage() {
                 </ScrollArea>
             </div>
           )}
+
+        </header>
+        <main className="flex-1 overflow-auto notes-background flex flex-col">
+          {/* Tabs Bar */}
+          {/* {openTabs.length > 0 && (
+            <div className="flex-shrink-0 border-b bg-background/80 backdrop-blur-sm">
+                <ScrollArea className='w-full'>
+                    <div className="flex items-center gap-1 p-1">
+                        {openTabs.map(tab => (
+                            <div
+                            key={tab.id}
+                            className={cn(
+                                'flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-md border text-sm flex-shrink-0',
+                                activeTabId === tab.id ? 'bg-primary/10 border-primary' : 'bg-transparent border-transparent hover:bg-muted'
+                            )}
+                            >
+                            <button
+                                className="font-medium max-w-[28ch] truncate"
+                                onClick={() => setActiveTabId(tab.id)}
+                            >
+                                {tab.title || 'Untitled Note'}
+                            </button>
+                            <button
+                                className="text-muted-foreground hover:text-foreground rounded-full p-0.5 hover:bg-black/10"
+                                onClick={() => closeTab(tab.id)}
+                                aria-label={`Close ${tab.title}`}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+            </div>
+          )} */}
 
           {/* Editor Area */}
           <div className="flex-1 min-h-0">
