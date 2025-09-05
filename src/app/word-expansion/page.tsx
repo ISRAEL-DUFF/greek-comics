@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useTransition, useMemo, Suspense } from 'react';
@@ -132,15 +133,16 @@ function WordExpansionContent() {
         });
         setCurrentWord(null);
       } else if (result.data && result.data.length > 0) {
-        const lastWord = result.data[result.data.length - 1];
         toast({
           title: 'Expansion Complete',
           description: `Successfully generated details for ${result.data.length} word(s).`,
         });
-        // Open the last generated word in a UI tab and activate it
-        addTabAndActivate(lastWord);
-         setWords(''); // Clear input on success
-         fetchExpandedWords(); // Refresh the history list
+        
+        // Open all newly generated words in tabs
+        openMultipleTabsAndActivateLast(result.data);
+        
+        setWords(''); // Clear input on success
+        fetchExpandedWords(); // Refresh the history list
       }
     });
   };
@@ -229,7 +231,6 @@ function WordExpansionContent() {
   
   const isLoading = isGenerating || isLoadingContent;
 
-  // Tabs: open generated/selected words in UI tabs (not browser tabs)
   const addTabAndActivate = (wordItem: ExpandedWord) => {
     setOpenTabs((prev) => {
       const exists = prev.find((p) => p.id === wordItem.id);
@@ -240,6 +241,27 @@ function WordExpansionContent() {
     setCurrentWord(wordItem);
     setEditedContent(wordItem.expansion);
   };
+
+  const openMultipleTabsAndActivateLast = (newWords: ExpandedWord[]) => {
+    if (!newWords || newWords.length === 0) return;
+    
+    setOpenTabs(prev => {
+        const newTabs = [...prev];
+        const existingIds = new Set(prev.map(t => t.id));
+        newWords.forEach(word => {
+            if (!existingIds.has(word.id)) {
+                newTabs.push(word);
+            }
+        });
+        return newTabs;
+    });
+
+    // Activate the last word in the new list
+    const lastWord = newWords[newWords.length - 1];
+    setActiveTabId(lastWord.id);
+    setCurrentWord(lastWord);
+    setEditedContent(lastWord.expansion);
+  }
 
   const closeTab = (id: number) => {
     setOpenTabs((prev) => {
@@ -657,3 +679,4 @@ export default function WordExpansionPageWrapper() {
     </Suspense>
   );
 }
+
