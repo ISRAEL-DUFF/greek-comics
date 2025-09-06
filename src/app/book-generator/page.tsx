@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { BookGeneratorForm } from './components/book-generator-form';
 import { BookDisplay } from './components/book-display';
 import { SavedBooksList } from './components/saved-books-list';
+import { getBookByIdAction, type BookData, type SavedBookListItem } from './actions';
 import type { BookResult, BookData } from './actions';
 import { FullscreenBookViewer } from './components/fullscreen-book-viewer';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,18 @@ export default function BookGeneratorPage() {
     wordLookup.clearPanel(); // Clear the panel when a new book is imported
     setIsLoadingSaved(false);
     setIsSavedOpen(false); // Close modal on import
+  };
+  
+  const handleSelectSavedBook = async (item: SavedBookListItem) => {
+    setIsLoadingSaved(true);
+    setBookResult(null);
+    const data = await getBookByIdAction(item.id);
+    if (data) {
+      setBookResult({ data });
+    } else {
+      setBookResult({ error: 'Could not load the selected book.' });
+    }
+    setIsLoadingSaved(false);
   };
   
   const handleImportStarted = () => {
@@ -114,6 +127,7 @@ export default function BookGeneratorPage() {
                      <SavedBooksList 
                         onBookImported={handleImportedBook}
                         onImportStarted={handleImportStarted}
+                        onSavedBookSelected={handleSelectSavedBook}
                     />
                 </DialogContent>
             </Dialog>
@@ -131,6 +145,7 @@ export default function BookGeneratorPage() {
                 <SavedBooksList 
                   onBookImported={handleImportedBook}
                   onImportStarted={handleImportStarted}
+                  onSavedBookSelected={handleSelectSavedBook}
                 />
              </div>
           </aside>
