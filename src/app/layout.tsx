@@ -2,9 +2,9 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import Link from 'next/link';
-import { Book, MessageSquare, StickyNote, Menu } from 'lucide-react';
+import { Book, MessageSquare, StickyNote, Menu, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 export const metadata: Metadata = {
   title: 'Hellenika Komiks',
@@ -32,6 +32,12 @@ export default function RootLayout({
               </Link>
               {/* Desktop Navigation */}
               <nav className="hidden items-center gap-2 md:flex">
+                <Button variant="ghost" asChild>
+                  <Link href="/dashboard">
+                    <LayoutDashboard className="mr-2 h-4 w-4"/>
+                    Dashboard
+                  </Link>
+                </Button>
                 <Button variant="ghost" asChild>
                   <Link href="/">
                     <MessageSquare className="mr-2 h-4 w-4"/>
@@ -67,11 +73,21 @@ export default function RootLayout({
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left">
+                    <SheetHeader className="sr-only">
+                      <SheetTitle>Navigation Menu</SheetTitle>
+                      <SheetDescription>Main navigation links for the application.</SheetDescription>
+                    </SheetHeader>
                     <div className="flex flex-col gap-4 py-8">
                        <Link href="/" className="flex items-center gap-2 pb-4 border-b">
                           <Book className="h-6 w-6 text-primary" />
                           <span className="font-headline text-xl font-bold text-primary">Hellenika Komiks</span>
                         </Link>
+                        <Button variant="ghost" className="justify-start text-lg" asChild>
+                          <Link href="/dashboard">
+                            <LayoutDashboard className="mr-2 h-5 w-5"/>
+                            Dashboard
+                          </Link>
+                        </Button>
                       <Button variant="ghost" className="justify-start text-lg" asChild>
                         <Link href="/">
                           <MessageSquare className="mr-2 h-5 w-5"/>
