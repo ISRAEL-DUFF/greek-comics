@@ -10,11 +10,19 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 
 interface StoriesByLevelChartProps {
   data: { level: string; count: number }[];
 }
+
+const chartConfig = {
+  count: {
+    label: "Stories",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
+
 
 export function StoriesByLevelChart({ data }: StoriesByLevelChartProps) {
   return (
@@ -26,31 +34,24 @@ export function StoriesByLevelChart({ data }: StoriesByLevelChartProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="pl-2">
-        <ResponsiveContainer width="100%" height={350}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="level"
-              stroke="#888888"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              stroke="#888888"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              allowDecimals={false}
-              tickFormatter={(value) => `${value}`}
-            />
-             <Tooltip 
-                cursor={{fill: 'hsl(var(--muted))'}}
-                content={<ChartTooltipContent />}
-            />
-            <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+            <BarChart accessibilityLayer data={data}>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="level"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+                tickFormatter={(value) => value.slice(0, 3)}
+              />
+              <YAxis />
+              <Tooltip 
+                  cursor={false}
+                  content={<ChartTooltipContent indicator="dot" />}
+              />
+              <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+            </BarChart>
+        </ChartContainer>
       </CardContent>
     </Card>
   );
@@ -71,3 +72,4 @@ export function StoriesByLevelChartSkeleton() {
         </Card>
     );
 }
+
