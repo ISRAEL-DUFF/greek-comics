@@ -1,18 +1,20 @@
 
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { BookMarked, Upload } from "lucide-react";
-import type { BookData } from '../actions';
+import type { BookData, SavedBookListItem } from '../actions';
+import { getSavedBooksAction } from '../actions';
 import { z } from 'zod';
 
 interface SavedBooksListProps {
   onBookImported: (storyData: BookData | null) => void;
   onImportStarted: () => void;
+  onSavedBookSelected?: (item: SavedBookListItem) => void;
 }
 
 const PageIllustrationSchema = z.object({
@@ -59,9 +61,17 @@ type ImportResult = {
 };
 
 
-export function SavedBooksList({ onBookImported, onImportStarted }: SavedBooksListProps) {
+export function SavedBooksList({ onBookImported, onImportStarted, onSavedBookSelected }: SavedBooksListProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [saved, setSaved] = useState<SavedBookListItem[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const items = await getSavedBooksAction();
+      setSaved(items);
+    })();
+  }, []);
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -127,7 +137,7 @@ export function SavedBooksList({ onBookImported, onImportStarted }: SavedBooksLi
                 <BookMarked />
                 Saved Books
                 </CardTitle>
-                <CardDescription>Select a book to view it again.</CardDescription>
+                <CardDescription>Select a book to view it again, or import JSON.</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={handleImportClick}>
                 <Upload className="mr-2 h-4 w-4" />
@@ -144,10 +154,25 @@ export function SavedBooksList({ onBookImported, onImportStarted }: SavedBooksLi
       </CardHeader>
       <CardContent>
           <ScrollArea className="h-48">
+            {saved.length === 0 ? (
               <div className="text-center text-muted-foreground p-4 text-sm">
-                <p>Saving books to the cloud is not yet implemented.</p>
-                <p className="text-xs">Use the import/export feature for now.</p>
+                <p>No saved books found.</p>
+                <p className="text-xs">Use the Save button after generating a book.</p>
               </div>
+            ) : (
+              <div className="space-y-2">
+                {saved.map(item => (
+                  <button
+                    key={item.id}
+                    className="w-full text-left px-3 py-2 rounded hover:bg-muted border"
+                    onClick={() => onSavedBookSelected?.(item)}
+                  >
+                    <div className="font-medium truncate">{item.title}</div>
+                    <div className="text-xs text-muted-foreground truncate">{item.topic} • {item.level}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </ScrollArea>
       </CardContent>
     </Card>
