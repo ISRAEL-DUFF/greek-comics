@@ -1,170 +1,66 @@
-'use client';
 
-import { useState, useEffect } from 'react';
-import { StoryGeneratorForm } from '@/components/story-generator-form';
-import { StoryDisplay } from '@/components/story-display';
-import type { StoryResult, SavedStoryListItem, StoryData, GlossStoryOutput, Sentence } from '@/app/actions';
-import { getSavedStoriesAction, getStoryByIdAction } from '@/app/actions';
-import { SavedStoriesList } from '@/components/saved-stories-list';
+import { Suspense } from 'react';
+import { getDashboardMetricsAction } from './dashboard/actions';
+import { StatCard, StatCardSkeleton } from './dashboard/components/stat-card';
+import { StoriesByLevelChart, StoriesByLevelChartSkeleton } from './dashboard/components/stories-by-level-chart';
+import { Book, Library, StickyNote } from 'lucide-react';
 
-/**
- * Creates a modern `Sentence[]` array from a simple story string.
- * This is a backward-compatibility helper for older saved stories.
- * @param storyText The full story as a single string.
- * @returns An array of Sentence objects.
- */
-function createSentencesFromStory(storyText: string): Sentence[] {
-    // Split the story into sentences using punctuation as delimiters.
-    const sentenceStrings = storyText.match(/[^.!?]+[.!?]+/g) || [storyText];
-    
-    return sentenceStrings.map(s => {
-      const trimmedSentence = s.trim();
-      // Split the sentence into words and create the word objects.
-      const words = trimmedSentence.split(/\s+/).map(w => ({ word: w, syntaxNote: 'N/A' }));
-      return { sentence: trimmedSentence, words }; // detailedSyntax will be undefined
-    });
-}
-
-
-export default function Home() {
-  const [storyResult, setStoryResult] = useState<StoryResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingSaved, setIsLoadingSaved] = useState(false);
-  const [savedStories, setSavedStories] = useState<SavedStoryListItem[]>([]);
-  const [currentStoryId, setCurrentStoryId] = useState<number | null>(null);
-
-  const fetchSavedStories = async () => {
-    const stories = await getSavedStoriesAction();
-    setSavedStories(stories);
-  };
-
-  useEffect(() => {
-    fetchSavedStories();
-  }, []);
-
-  const handleStoryGenerated = (result: StoryResult | null) => {
-    if(result) {
-      setStoryResult(result);
-      setCurrentStoryId(null); 
-    }
-  };
-  
-  const handleStorySaved = () => {
-    fetchSavedStories();
-  };
-  
-  const handleSelectStory = async (storyListItem: SavedStoryListItem) => {
-    setIsLoadingSaved(true);
-    setCurrentStoryId(storyListItem.id);
-    setStoryResult(null); // Clear previous story
-
-    const fullStory = await getStoryByIdAction(storyListItem.id);
-    
-    if (fullStory) {
-      // BACKWARD COMPATIBILITY CHECK:
-      // Check if the loaded story has the new `sentences.words` array of objects.
-      // If not, it's an old story format, and we need to convert it.
-      const sentences = (fullStory.sentences && fullStory.sentences.length > 0 && typeof fullStory.sentences[0] !== 'string' && fullStory.sentences[0].words)
-        ? fullStory.sentences
-        : createSentencesFromStory(fullStory.story);
-
-      setStoryResult({
-        data: {
-          story: fullStory.story,
-          sentences: sentences,
-          illustrations: fullStory.illustrations,
-          level: fullStory.level,
-          topic: fullStory.topic,
-          grammar_scope: fullStory.grammar_scope,
-          glosses: fullStory.glosses || {},
-        },
-      });
-    } else {
-      setStoryResult({
-        error: "Could not load the selected story. It may have been deleted."
-      });
-    }
-    setIsLoadingSaved(false);
-  };
-  
-  const handleGlossesRegenerated = (newGlosses: GlossStoryOutput) => {
-    setStoryResult(prevResult => {
-      if (!prevResult || !prevResult.data) {
-        return prevResult;
-      }
-      return {
-        ...prevResult,
-        data: {
-          ...prevResult.data,
-          glosses: newGlosses,
-        },
-      };
-    });
-  };
-  
-  const handleImportedStory = (importedData: StoryData | null) => {
-    if (importedData) {
-      // BACKWARD COMPATIBILITY: Run the same checks as for saved stories.
-      const sentences = (importedData.sentences && importedData.sentences.length > 0 && typeof importedData.sentences[0] !== 'string' && importedData.sentences[0].words)
-        ? importedData.sentences
-        : createSentencesFromStory(importedData.story);
-      
-      const storyDataWithCompatibility = {
-        ...importedData,
-        sentences,
-      };
-
-      setStoryResult({ data: storyDataWithCompatibility });
-      setCurrentStoryId(null);
-    }
-    // This will be called after the import action is complete, successful or not.
-    setIsLoadingSaved(false);
-  };
-  
-  const handleImportStarted = () => {
-    setIsLoadingSaved(true);
-    setStoryResult(null);
-    setCurrentStoryId(null);
-  };
+async function DashboardMetrics() {
+  const metrics = await getDashboardMetricsAction();
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
-      <main className="container mx-auto flex-1 px-4 py-8">
-        <div className="text-center mb-12">
-            <h1 className="font-headline text-4xl font-bold text-primary">Story Generator</h1>
-            <p className="mt-1 text-lg text-muted-foreground">Create short, sentence-by-sentence illustrated stories.</p>
-        </div>
-        <div className="grid gap-12 lg:grid-cols-12">
-          <aside className="no-print lg:col-span-4 xl:col-span-3">
-             <div className="sticky top-24 space-y-8">
-                <StoryGeneratorForm 
-                  setStoryResult={handleStoryGenerated} 
-                  setIsLoading={setIsLoading} 
-                  isLoading={isLoading} 
-                />
-                <SavedStoriesList
-                  stories={savedStories} 
-                  onSelectStory={handleSelectStory} 
-                  onStoryImported={handleImportedStory}
-                  onImportStarted={handleImportStarted}
-                  currentStoryId={currentStoryId}
-                />
-             </div>
-          </aside>
-          <div className="lg:col-span-8 xl:col-span-9">
-            <StoryDisplay 
-              storyResult={storyResult} 
-              isLoading={isLoading || isLoadingSaved} 
-              onStorySaved={handleStorySaved} 
-              currentStoryId={currentStoryId}
-              onGlossesRegenerated={handleGlossesRegenerated}
-            />
-          </div>
-        </div>
-      </main>
-      <footer className="no-print py-6 text-center text-sm text-muted-foreground">
-        <p>Built with Next.js and Genkit. Illustrations and stories are AI-generated.</p>
-      </footer>
+    <>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          title="Total Stories"
+          value={metrics.storyCount}
+          icon={<Book className="h-4 w-4 text-muted-foreground" />}
+          description="Total number of stories saved in the database."
+        />
+        <StatCard
+          title="Expanded Words"
+          value={metrics.wordCount}
+          icon={<Library className="h-4 w-4 text-muted-foreground" />}
+          description="Total unique words expanded and saved."
+        />
+        <StatCard
+          title="Total Notes"
+          value={metrics.noteCount}
+          icon={<StickyNote className="h-4 w-4 text-muted-foreground" />}
+          description="Total number of notes created in the system."
+        />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <StoriesByLevelChart data={metrics.storiesByLevel} />
+      </div>
+    </>
+  );
+}
+
+function DashboardMetricsSkeleton() {
+    return (
+        <>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <StatCardSkeleton />
+                <StatCardSkeleton />
+                <StatCardSkeleton />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <StoriesByLevelChartSkeleton />
+            </div>
+      </>
+    )
+}
+
+export default function DashboardPage() {
+  return (
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight font-headline text-primary">Dashboard</h1>
+      </div>
+      <Suspense fallback={<DashboardMetricsSkeleton />}>
+        <DashboardMetrics />
+      </Suspense>
     </div>
   );
 }

@@ -33,13 +33,13 @@ export default function RootLayout({
               {/* Desktop Navigation */}
               <nav className="hidden items-center gap-2 md:flex">
                 <Button variant="ghost" asChild>
-                  <Link href="/dashboard">
+                  <Link href="/">
                     <LayoutDashboard className="mr-2 h-4 w-4"/>
                     Dashboard
                   </Link>
                 </Button>
                 <Button variant="ghost" asChild>
-                  <Link href="/">
+                  <Link href="/story-generator">
                     <MessageSquare className="mr-2 h-4 w-4"/>
                     Story Generator
                   </Link>
@@ -83,13 +83,13 @@ export default function RootLayout({
                           <span className="font-headline text-xl font-bold text-primary">Hellenika Komiks</span>
                         </Link>
                         <Button variant="ghost" className="justify-start text-lg" asChild>
-                          <Link href="/dashboard">
+                          <Link href="/">
                             <LayoutDashboard className="mr-2 h-5 w-5"/>
                             Dashboard
                           </Link>
                         </Button>
                       <Button variant="ghost" className="justify-start text-lg" asChild>
-                        <Link href="/">
+                        <Link href="/story-generator">
                           <MessageSquare className="mr-2 h-5 w-5"/>
                           Story Generator
                         </Link>
