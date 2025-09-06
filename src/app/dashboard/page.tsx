@@ -1,8 +1,8 @@
 
 import { Suspense } from 'react';
-import { getDashboardMetricsAction } from './dashboard/actions';
-import { StatCard, StatCardSkeleton } from './dashboard/components/stat-card';
-import { StoriesByLevelChart, StoriesByLevelChartSkeleton } from './dashboard/components/stories-by-level-chart';
+import { getDashboardMetricsAction } from './actions';
+import { StatCard, StatCardSkeleton } from './components/stat-card';
+import { StoriesByLevelChart, StoriesByLevelChartSkeleton } from './components/stories-by-level-chart';
 import { Book, Library, StickyNote } from 'lucide-react';
 
 async function DashboardMetrics() {
