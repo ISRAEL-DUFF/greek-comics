@@ -62,6 +62,12 @@ export default function RootLayout({
                     Notes
                   </Link>
                 </Button>
+                <Button variant="ghost" asChild>
+                   <Link href="/notebook">
+                    <StickyNote className="mr-2 h-4 w-4"/>
+                    notes2
+                  </Link>
+                </Button>
               </nav>
               {/* Mobile Navigation */}
               <div className="md:hidden">
@@ -110,6 +116,12 @@ export default function RootLayout({
                          <Link href="/notes">
                           <StickyNote className="mr-2 h-5 w-5"/>
                           Notes
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="justify-start text-lg" asChild>
+                         <Link href="/notebook">
+                          <StickyNote className="mr-2 h-5 w-5"/>
+                          notes2
                         </Link>
                       </Button>
                     </div>

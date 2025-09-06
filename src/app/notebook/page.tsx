@@ -10,10 +10,32 @@ import { useToast } from '@/hooks/use-toast';
 import { MarkdownEditor } from '@/components/markdown-editor';
 import { MarkdownDisplay } from '@/components/markdown-display';
 import { cn } from '@/lib/utils';
-import { Plus, Search, Edit3, Check, Trash2, Save, Loader2, Tags } from 'lucide-react';
+import { Plus, Search, Edit3, Check, Trash2, Save, Loader2, Tags, MoreVertical, Folder as FolderIcon, FolderPlus } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import './notebook.css';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+} from '@/components/ui/dropdown-menu';
 
 export default function NotebookPage() {
   const { toast } = useToast();
@@ -21,6 +43,8 @@ export default function NotebookPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [filtered, setFiltered] = useState<Note[]>([]);
   const [active, setActive] = useState<Note | null>(null);
+  const [openTabs, setOpenTabs] = useState<Note[]>([]);
+  const [activeTabId, setActiveTabId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, startSaving] = useTransition();
   const [query, setQuery] = useState('');
@@ -29,14 +53,19 @@ export default function NotebookPage() {
   // Mobile view state: 'list' or 'page'
   const [mobileView, setMobileView] = useState<'list' | 'page'>('list');
   const [isDesktop, setIsDesktop] = useState(false);
+  const [restored, setRestored] = useState(false);
 
   // Editable fields
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState<'all' | 'unfiled' | string>('all');
 
   const prevId = useRef<number | undefined>(undefined);
+  const OPEN_TABS_LS_KEY = 'notebook.openTabs.v1'; // legacy (array of Note)
+  const OPEN_TAB_IDS_LS_KEY = 'notebook.openTabIds.v1'; // new (array of ids)
+  const ACTIVE_TAB_ID_LS_KEY = 'notebook.activeTabId.v1';
 
   useEffect(() => {
     // Track viewport to decide desktop vs mobile behavior
@@ -51,13 +80,54 @@ export default function NotebookPage() {
       setNotes(list);
       setIsLoading(false);
 
-      // On desktop, auto-open the most recent note; on mobile, stay in list view
-      if (list.length > 0 && (mq?.matches ?? false)) {
-        const full = await getNoteById(list[0].id);
-        if (full) {
-          setActive(full);
-          setMobileView('page');
+      // Restore open tabs (prefer IDs-based storage)
+      try {
+        const idsRaw = localStorage.getItem(OPEN_TAB_IDS_LS_KEY);
+        if (idsRaw) {
+          const idsParsed = JSON.parse(idsRaw) as number[];
+          if (Array.isArray(idsParsed) && idsParsed.length > 0) {
+            const fetched = await Promise.all(idsParsed.map(id => getNoteById(id)));
+            const tabs = fetched.filter((n): n is Note => !!n);
+            if (tabs.length > 0) {
+              setOpenTabs(tabs);
+              const storedActive = Number(localStorage.getItem(ACTIVE_TAB_ID_LS_KEY) || '');
+              const candidate = tabs.find(t => t.id === storedActive)?.id ?? tabs[tabs.length - 1].id;
+              setActiveTabId(candidate);
+              setMobileView('page');
+              return; // done
+            }
+          }
         }
+
+        // Legacy: restore full notes array if present, and migrate to IDs
+        const raw = localStorage.getItem(OPEN_TABS_LS_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Note[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setOpenTabs(parsed);
+            setActiveTabId(parsed[parsed.length - 1].id);
+            localStorage.setItem(OPEN_TAB_IDS_LS_KEY, JSON.stringify(parsed.map(p => p.id)));
+            localStorage.setItem(ACTIVE_TAB_ID_LS_KEY, String(parsed[parsed.length - 1].id));
+            setMobileView('page');
+            return;
+          }
+        }
+
+        // Fallback: open most recent on desktop only
+        if (list.length > 0) {
+          const full = await getNoteById(list[0].id);
+          if (full) {
+            setOpenTabs([full]);
+            setActiveTabId(full.id);
+            localStorage.setItem(OPEN_TAB_IDS_LS_KEY, JSON.stringify([full.id]));
+            localStorage.setItem(ACTIVE_TAB_ID_LS_KEY, String(full.id));
+            if (mq?.matches) setMobileView('page');
+          }
+        }
+      } catch {
+        // ignore
+      } finally {
+        setRestored(true);
       }
     })();
 
@@ -79,6 +149,37 @@ export default function NotebookPage() {
     }
   }, [notes, query]);
 
+  // Persist open tab IDs (after initial restore)
+  useEffect(() => {
+    try {
+      if (!restored) return;
+      const ids = openTabs.map(t => t.id);
+      localStorage.setItem(OPEN_TAB_IDS_LS_KEY, JSON.stringify(ids));
+    } catch {}
+  }, [openTabs, restored]);
+
+  // Persist active tab id (after initial restore)
+  useEffect(() => {
+    try {
+      if (!restored) return;
+      if (activeTabId != null) {
+        localStorage.setItem(ACTIVE_TAB_ID_LS_KEY, String(activeTabId));
+      } else {
+        localStorage.removeItem(ACTIVE_TAB_ID_LS_KEY);
+      }
+    } catch {}
+  }, [activeTabId, restored]);
+
+  // Derive active note from activeTabId
+  useEffect(() => {
+    if (activeTabId == null) {
+      setActive(null);
+      return;
+    }
+    const n = openTabs.find(t => t.id === activeTabId) || null;
+    setActive(n);
+  }, [activeTabId, openTabs]);
+
   // Load editor state on active change
   useEffect(() => {
     if (!active) return;
@@ -91,10 +192,21 @@ export default function NotebookPage() {
     }
   }, [active]);
 
+  const addTabAndActivate = (note: Note) => {
+    setOpenTabs(prev => (prev.some(p => p.id === note.id) ? prev : [...prev, note]));
+    setActiveTabId(note.id);
+  };
+
   const openNote = async (id: number) => {
+    const exists = openTabs.find(t => t.id === id);
+    if (exists) {
+      setActiveTabId(id);
+      setMobileView('page');
+      return;
+    }
     const full = await getNoteById(id);
     if (full) {
-      setActive(full);
+      addTabAndActivate(full);
       setMobileView('page');
     } else {
       toast({ variant: 'destructive', title: 'Failed to open note' });
@@ -105,7 +217,7 @@ export default function NotebookPage() {
     const note = await createNote('Untitled Note');
     if (note) {
       setNotes(prev => [note, ...prev]);
-      setActive(note);
+      addTabAndActivate(note);
       setIsEdit(true);
       toast({ title: 'New note created' });
     } else {
@@ -120,6 +232,7 @@ export default function NotebookPage() {
       const updated: Note = { ...active, title, content, tags };
       setActive(updated);
       setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
+      setOpenTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)));
       toast({ title: 'Saved' });
     });
   };
@@ -128,7 +241,8 @@ export default function NotebookPage() {
     if (!active) return;
     await deleteNote(active.id);
     setNotes(prev => prev.filter(n => n.id !== active.id));
-    setActive(null);
+    // close from tabs
+    closeTab(active.id, true);
     toast({ title: 'Note deleted' });
   };
 
@@ -140,6 +254,132 @@ export default function NotebookPage() {
   };
 
   const removeTag = (t: string) => setTags(prev => prev.filter(x => x !== t));
+
+  const closeTab = (id: number, isDeletion = false) => {
+    setOpenTabs(prev => {
+      const idx = prev.findIndex(p => p.id === id);
+      if (idx === -1) return prev;
+      const newTabs = prev.filter(p => p.id !== id);
+      if (activeTabId === id) {
+        let next: number | null = null;
+        if (newTabs.length > 0) {
+          next = (newTabs[idx] || newTabs[idx - 1] || newTabs[newTabs.length - 1]).id;
+        }
+        setActiveTabId(next);
+        if (!isDeletion && !isDesktop && next == null) setMobileView('list');
+      }
+      if (!isDeletion) toast({ title: 'Tab Closed' });
+      return newTabs;
+    });
+  };
+
+  // ----- Folder helpers -----
+  type FolderNode = { name: string; path: string; children: Record<string, FolderNode> };
+  const { folderTree, allFolderPaths } = React.useMemo(() => {
+    const tree: Record<string, FolderNode> = {};
+    const paths = new Set<string>();
+    for (const n of notes) {
+      if (!n.folder_path) continue;
+      paths.add(n.folder_path);
+      const parts = n.folder_path.split(':');
+      let current = tree;
+      let currentPath = '';
+      parts.forEach((part, idx) => {
+        currentPath = idx === 0 ? part : `${currentPath}:${part}`;
+        if (!current[part]) current[part] = { name: part, path: currentPath, children: {} };
+        current = current[part].children;
+      });
+    }
+    return { folderTree: tree, allFolderPaths: Array.from(paths).sort() };
+  }, [notes]);
+
+  const visibleNotes: Note[] = React.useMemo(() => {
+    const base = filtered;
+    if (selectedFolder === 'all') return base;
+    if (selectedFolder === 'unfiled') return base.filter(n => !n.folder_path);
+    return base.filter(n => n.folder_path === selectedFolder);
+  }, [filtered, selectedFolder]);
+
+  const handleMoveNote = async (noteId: number, folderPath: string | null) => {
+    await updateNote({ id: noteId, folder_path: folderPath });
+    setNotes(prev => prev.map(n => (n.id === noteId ? { ...n, folder_path: folderPath } : n)));
+    setFiltered(prev => prev.map(n => (n.id === noteId ? { ...n, folder_path: folderPath } : n)));
+    setActive(prev => (prev?.id === noteId ? { ...(prev as Note), folder_path: folderPath } : prev));
+    toast({ title: 'Note moved' });
+  };
+
+  const createFolderWithNote = async (path: string) => {
+    const note = await createNote('Untitled Note', path);
+    if (note) {
+      setNotes(prev => [note, ...prev]);
+      addTabAndActivate(note);
+      setSelectedFolder(path);
+      setMobileView('page');
+      toast({ title: 'Folder created', description: 'A new note was created inside the folder.' });
+    } else {
+      toast({ variant: 'destructive', title: 'Failed to create folder/note' });
+    }
+  };
+
+  const FolderDialog = ({ onDone, existingPaths }: { onDone: (p: string) => void; existingPaths: string[] }) => {
+    const [path, setPath] = useState('');
+    const [error, setError] = useState('');
+    const submit = (e: React.FormEvent) => {
+      e.preventDefault();
+      const finalPath = path.trim();
+      if (!finalPath) return;
+      if (existingPaths.includes(finalPath)) {
+        setError('A folder with this path already exists.');
+        return;
+      }
+      if (/[^a-zA-Z0-9_:-]/.test(finalPath)) {
+        setError('Use letters, numbers, underscores, and colons only.');
+        return;
+      }
+      onDone(finalPath);
+    };
+    return (
+      <form onSubmit={submit}>
+        <DialogHeader>
+          <DialogTitle>New Folder</DialogTitle>
+          <DialogDescription>Use colons to create nested folders. Example: school:notes:science</DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <Label htmlFor="folder-path">Path</Label>
+          <Input id="folder-path" value={path} onChange={(e) => { setPath(e.target.value); setError(''); }} placeholder="e.g., work:2024:meeting-notes" />
+          {error && <p className="text-sm text-destructive mt-1">{error}</p>}
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="ghost">Cancel</Button>
+          </DialogClose>
+          <Button type="submit" disabled={!path.trim()}>Create</Button>
+        </DialogFooter>
+      </form>
+    );
+  };
+
+  const FolderRenderer = ({ nodes }: { nodes: Record<string, FolderNode> }) => (
+    <div className="w-full">
+      {Object.values(nodes).sort((a,b) => a.name.localeCompare(b.name)).map(node => (
+        <AccordionItem value={node.path} key={node.path}>
+          <AccordionTrigger>
+            <button
+              type="button"
+              className={cn('flex items-center gap-2 text-left', selectedFolder === node.path && 'text-primary')}
+              onClick={(e) => { e.stopPropagation(); setSelectedFolder(node.path); }}
+            >
+              <FolderIcon className="h-4 w-4" />
+              <span className="truncate">{node.name}</span>
+            </button>
+          </AccordionTrigger>
+          <AccordionContent>
+            <FolderRenderer nodes={node.children} />
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </div>
+  );
 
   return (
     <div className={cn('notebook-root flex min-h-[calc(100vh-56px)] w-full bg-slate-50 text-foreground')}> 
@@ -160,6 +400,20 @@ export default function NotebookPage() {
             <Button onClick={createNew} className="gap-2">
               <Plus className="h-4 w-4" /> New
             </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="New Folder">
+                  <FolderPlus className="h-4 w-4"/>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <FolderDialog existingPaths={allFolderPaths} onDone={(path) => {
+                  createFolderWithNote(path);
+                  const btn = document.querySelector('[data-radix-dialog-close]') as HTMLElement | null;
+                  btn?.click();
+                }} />
+              </DialogContent>
+            </Dialog>
             <div className="relative flex-1">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search notes..." className="pl-8" />
@@ -167,16 +421,27 @@ export default function NotebookPage() {
           </div>
 
           <ScrollArea className="soft-scrollbars h-[calc(100svh-56px-49px)] md:h-[calc(100vh-56px-49px)]">
-            <div className="p-2 space-y-2">
+            <div className="p-2 space-y-3">
+              {/* Folder filter */}
+              <Accordion type="multiple" defaultValue={[...allFolderPaths]} className="w-full">
+                <div className="flex items-center gap-2 px-1">
+                  <Button size="sm" variant={selectedFolder === 'all' ? 'default' : 'outline'} onClick={() => setSelectedFolder('all')}>All</Button>
+                  <Button size="sm" variant={selectedFolder === 'unfiled' ? 'default' : 'outline'} onClick={() => setSelectedFolder('unfiled')}>Unfiled</Button>
+                </div>
+                <div className="px-1">
+                  <FolderRenderer nodes={folderTree} />
+                </div>
+              </Accordion>
+              <div className="h-px bg-slate-200" />
               {isLoading && (
                 Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="h-16 animate-pulse rounded-md bg-slate-100" />
                 ))
               )}
-              {!isLoading && filtered.length === 0 && (
+              {!isLoading && visibleNotes.length === 0 && (
                 <div className="text-sm text-muted-foreground p-4 text-center">No notes found</div>
               )}
-              {!isLoading && filtered.map(n => (
+              {!isLoading && visibleNotes.map(n => (
                 <button
                   key={n.id}
                   onClick={() => openNote(n.id)}
@@ -185,7 +450,38 @@ export default function NotebookPage() {
                     active?.id === n.id ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'
                   )}
                 >
-                  <div className="sticky-label inline-block rounded px-2 py-1 text-sm font-medium">{n.title || 'Untitled Note'}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="sticky-label inline-block rounded px-2 py-1 text-sm font-medium max-w-[75%] truncate">{n.title || 'Untitled Note'}</div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                          <MoreVertical className="h-4 w-4"/>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                              <DropdownMenuItem onClick={() => handleMoveNote(n.id, null)}>
+                                Unfiled Notes
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {allFolderPaths.map(path => (
+                                <DropdownMenuItem key={path} onClick={() => handleMoveNote(n.id, path)}>
+                                  {path.replace(/:/g, ' / ')}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setActive(n); remove(); }}>
+                          <Trash2 className="mr-2 h-4 w-4"/> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                   {n.tags?.length ? (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {n.tags.slice(0, 4).map(t => (
@@ -208,6 +504,39 @@ export default function NotebookPage() {
             'md:block'
           )}
         >
+          {/* Tabs bar */}
+          {openTabs.length > 0 && (
+            <div className="mb-2">
+              <div className="w-full overflow-x-auto">
+                <div className="flex items-center gap-1 p-1">
+                  {openTabs.map(tab => (
+                    <div
+                      key={tab.id}
+                      className={cn(
+                        'flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-md border text-sm flex-shrink-0',
+                        activeTabId === tab.id ? 'bg-primary/10 border-primary' : 'bg-transparent border-transparent hover:bg-muted'
+                      )}
+                    >
+                      <button
+                        className="font-medium max-w-[28ch] truncate"
+                        onClick={() => setActiveTabId(tab.id)}
+                      >
+                        {tab.title || 'Untitled Note'}
+                      </button>
+                      <button
+                        className="text-muted-foreground hover:text-foreground rounded-full p-0.5 hover:bg-black/10"
+                        onClick={() => closeTab(tab.id)}
+                        aria-label={`Close ${tab.title}`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className={cn('paper rounded-xl overflow-hidden', showLines && 'lined')}>
             {/* Toolbar with back button on mobile */}
             <div className="flex items-center justify-between gap-2 border-b bg-white/70 px-2 py-2 backdrop-blur-sm md:px-4">
