@@ -32,7 +32,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Tags, Plus, X } from 'lucide-react';
+import { Copy, Tags, Plus, X, XCircle } from 'lucide-react';
 
 const greekNormalization = {
   normalizeGreek: (lemma: string) =>{
@@ -304,6 +304,18 @@ function WordExpansionContent() {
       }
       return next;
     });
+  };
+
+  const clearAllTabs = () => {
+    if (openTabs.length === 0) return;
+    setOpenTabs([]);
+    setActiveTabId(null);
+    setCurrentWord(null);
+    setEditedContent('');
+    try {
+      localStorage.setItem(OPEN_TABS_LS_KEY, JSON.stringify([]));
+    } catch {}
+    toast({ title: 'Tabs Cleared', description: 'All open tabs have been closed.' });
   };
 
   // Tagging handlers
@@ -581,12 +593,73 @@ function WordExpansionContent() {
                                 {currentWord ? `Details for "${currentWord.word}"` : 'Select or generate a word to see its analysis.'}
                               </CardDescription>
                             </div>
-                            {currentWord && !isEditMode && (
-                              <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
+                            <div className="flex items-center gap-2 flex-wrap justify-end">
+                              {/* Mobile: icon-only */}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setIsTagsModalOpen(true)}
+                                className="sm:hidden"
+                                aria-label="Tags"
+                              >
+                                <Tags className="h-4 w-4" />
                               </Button>
-                            )}
+                              {openTabs.length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={clearAllTabs}
+                                  className="sm:hidden"
+                                  aria-label="Clear tabs"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {currentWord && !isEditMode && (
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => setIsEditMode(true)}
+                                  className="sm:hidden"
+                                  aria-label="Edit"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              {/* Desktop/tablet: labeled */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setIsTagsModalOpen(true)}
+                                className="hidden sm:flex"
+                              >
+                                <Tags className="mr-2 h-4 w-4" />
+                                Tags
+                              </Button>
+                              {openTabs.length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={clearAllTabs}
+                                  className="hidden sm:flex"
+                                >
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Clear Tabs
+                                </Button>
+                              )}
+                              {currentWord && !isEditMode && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setIsEditMode(true)}
+                                  className="hidden sm:flex"
+                                >
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </Button>
+                              )}
+                            </div>
                           </div>
 
                           {/* Tags controls */}
@@ -600,11 +673,6 @@ function WordExpansionContent() {
                                   </button>
                                 </Badge>
                               ))}
-                              <div className="flex items-center gap-2">
-                                <Button size="sm" variant="ghost" onClick={() => setIsTagsModalOpen(true)}>
-                                  <Tags className="mr-1 h-3 w-3" /> Tags
-                                </Button>
-                              </div>
                             </div>
                           )}
 
@@ -638,6 +706,12 @@ function WordExpansionContent() {
                                   </button>
                                 </div>
                               ))}
+                              <div className="flex items-center">
+                                <Button variant="ghost" size="sm" onClick={clearAllTabs}>
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Clear All
+                                </Button>
+                              </div>
                             </div>
                           )}
                       </div>
