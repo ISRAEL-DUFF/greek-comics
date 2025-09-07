@@ -216,7 +216,7 @@ export function NoteEditor({ note, onNoteUpdated }: NoteEditorProps) {
             <MarkdownEditor className='h-full' value={content} onChange={(value) => setContent(value || '')} />
          ) : (
             <div className="p-1 h-full prose-sm prose-p:font-body max-w-none">
-              <MarkdownDisplay markdown={content} className="w-[98%] overflow-x-auto" markdownClassName = "prose prose-sm prose-p:font-body prose-headings:font-headline max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2 overflow-x-auto" />
+              <MarkdownDisplay markdown={content} className="w-[98%] overflow-x-auto" markdownClassName = "prose prose-md prose-p:font-body prose-headings:font-headline max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2 overflow-x-auto" />
             </div>
          )}
       </div>

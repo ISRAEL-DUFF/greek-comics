@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, BookOpen, Download, FileJson, ImagePlus, Image as ImageIcon, Languages, Maximize, MessageSquareQuote, WholeWord, Library, BadgeHelp, ClipboardCheck } from 'lucide-react';
+import { AlertCircle, BookOpen, Download, FileJson, ImagePlus, Image as ImageIcon, Languages, Maximize, MessageSquareQuote, WholeWord, Library, BadgeHelp, ClipboardCheck, Save, Loader2 } from 'lucide-react';
 import type { BookResult } from '../actions';
 import {
   Carousel,
@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { FootnoteImageModal } from './footnote-image-modal';
 import type { BookData } from '../actions';
+import { saveBookAction } from '../actions';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -118,6 +119,7 @@ export function BookDisplay({
   const { toast } = useToast();
   const [currentBook, setCurrentBook] = useState<BookData | null>(bookResult?.data || null);
   const [isWordClick, setIsWordClick] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
@@ -293,7 +295,27 @@ export function BookDisplay({
                   <Download className="mr-2 h-4 w-4" />
                   PDF
               </Button>
-               <Button variant="outline" onClick={onEnterFullscreen}>
+              {!!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && (
+                <Button
+                  onClick={async () => {
+                    if (!currentBook) return;
+                    setIsSaving(true);
+                    const res = await saveBookAction(currentBook);
+                    setIsSaving(false);
+                    if (res.success) {
+                      toast({ title: 'Book Saved!', description: 'Your book has been saved to the cloud.' });
+                    } else {
+                      toast({ variant: 'destructive', title: 'Save Failed', description: res.error || 'Unknown error' });
+                    }
+                  }}
+                  disabled={isSaving || !currentBook}
+                  className="bg-accent text-accent-foreground hover:bg-accent/90"
+                >
+                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  {isSaving ? 'Saving...' : 'Save Book'}
+                </Button>
+              )}
+              <Button variant="outline" onClick={onEnterFullscreen}>
                   <Maximize className="mr-2 h-4 w-4" />
                   Fullscreen
               </Button>

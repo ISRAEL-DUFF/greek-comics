@@ -27,6 +27,107 @@ export type GenerateImageResult = {
     error?: string;
 }
 
+// Supabase integration for saving books
+import { supabase } from '@/lib/supabase';
+
+const BOOKS_TABLE = 'books';
+
+export type SavedBook = {
+  id: number;
+  created_at: string;
+  title: string;
+  author: string;
+  pages: BookData['pages'];
+  coverIllustrationUri: string;
+  topic: string;
+  level: string;
+  grammarScope: string;
+};
+
+export type SavedBookListItem = Pick<SavedBook, 'id' | 'created_at' | 'title' | 'topic' | 'level'>;
+
+export type SaveBookResult = { success?: boolean; error?: string };
+
+export async function saveBookAction(book: BookData): Promise<SaveBookResult> {
+  if (!supabase) {
+    return { error: 'Supabase is not configured. Cannot save book.' };
+  }
+  if (!book || !book.title || !book.pages || !book.coverIllustrationUri) {
+    return { error: 'Invalid book data provided.' };
+  }
+
+  try {
+    const { error } = await supabase
+      .from(BOOKS_TABLE)
+      .insert([
+        {
+          title: book.title,
+          author: book.author,
+          pages: book.pages,
+          coverIllustrationUri: book.coverIllustrationUri,
+          topic: book.topic,
+          level: book.level,
+          grammarScope: book.grammarScope,
+        },
+      ]);
+    if (error) {
+      console.error('Error saving book:', error);
+      return { error: `Failed to save book: ${error.message}` };
+    }
+    return { success: true };
+  } catch (e) {
+    console.error('Unexpected error saving book:', e);
+    return { error: 'Unexpected error saving book.' };
+  }
+}
+
+export async function getSavedBooksAction(): Promise<SavedBookListItem[]> {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from(BOOKS_TABLE)
+      .select('id, created_at, title, topic, level')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('Error fetching saved books:', error);
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    console.error('Unexpected error fetching saved books:', e);
+    return [];
+  }
+}
+
+export async function getBookByIdAction(id: number): Promise<BookData | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from(BOOKS_TABLE)
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) {
+      console.error('Error fetching book by id:', error);
+      return null;
+    }
+    if (!data) return null;
+    const book: BookData = {
+      title: data.title,
+      author: data.author,
+      pages: data.pages,
+      coverIllustrationUri: data.coverIllustrationUri,
+      topic: data.topic,
+      level: data.level,
+      grammarScope: data.grammarScope,
+    };
+    return book;
+  } catch (e) {
+    console.error('Unexpected error fetching book by id:', e);
+    return null;
+  }
+}
+
 
 export async function generateBookAction(
   formData: FormData
