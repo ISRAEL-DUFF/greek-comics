@@ -165,7 +165,8 @@ export function SavedBooksList({ onBookImported, onImportStarted, onSavedBookSel
                     onClick={() => onSavedBookSelected?.(item)}
                   >
                     <div className="font-medium truncate">{item.title}</div>
-                    <div className="text-xs text-muted-foreground truncate">{item.vocabList} • {item.level}</div>
+                    {/* The 'topic' field now holds the vocab list for these items */}
+                    <div className="text-xs text-muted-foreground truncate">{item.topic} • {item.level}</div>
                   </button>
                 ))}
               </div>

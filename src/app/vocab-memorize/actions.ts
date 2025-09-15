@@ -2,7 +2,8 @@
 'use server';
 
 import { z } from 'zod';
-import { generateVocabMemorizeBook, generateBookCover, type GenerateVocabMemorizeBookOutput } from '@/ai/flows/generate-vocab-memorize-book';
+import { generateVocabMemorizeBook, generateBookCover } from '@/ai/flows/generate-vocab-memorize-book';
+import type { GenerateVocabMemorizeBookOutput } from '@/ai/flows/generate-vocab-memorize-book';
 import { generateFootnoteIllustration as generateFootnoteIllustrationFlow } from '@/ai/flows/generate-footnote-illustration';
 import { VocabMemorizeFormSchema } from './schema';
 import { ai } from '@/ai/genkit';
@@ -30,7 +31,8 @@ export type GenerateImageResult = {
 // Supabase integration for saving books
 import { supabase } from '@/lib/supabase';
 
-const BOOKS_TABLE = 'vocab_books';
+// Use the same table as the original book generator
+const BOOKS_TABLE = 'books';
 
 export type SavedBook = {
   id: number;
@@ -39,12 +41,13 @@ export type SavedBook = {
   author: string;
   pages: BookData['pages'];
   coverIllustrationUri: string;
-  vocabList: string;
+  // The 'topic' field in the DB will store the vocab list for this feature type
+  topic: string; // Was vocabList
   level: string;
   grammarScope: string;
 };
 
-export type SavedBookListItem = Pick<SavedBook, 'id' | 'created_at' | 'title' | 'vocabList' | 'level'>;
+export type SavedBookListItem = Pick<SavedBook, 'id' | 'created_at' | 'title' | 'topic' | 'level'>;
 
 export type SaveBookResult = { success?: boolean; error?: string };
 
@@ -65,7 +68,8 @@ export async function saveBookAction(book: BookData): Promise<SaveBookResult> {
           author: book.author,
           pages: book.pages,
           coverIllustrationUri: book.coverIllustrationUri,
-          vocabList: book.vocabList,
+          // Map vocabList to the 'topic' column for storage
+          topic: book.vocabList,
           level: book.level,
           grammarScope: book.grammarScope,
         },
@@ -84,9 +88,11 @@ export async function saveBookAction(book: BookData): Promise<SaveBookResult> {
 export async function getSavedBooksAction(): Promise<SavedBookListItem[]> {
   if (!supabase) return [];
   try {
+    // This will fetch books from both generators. The 'topic' field will contain
+    // either a topic or a vocab list, which we can differentiate in the UI.
     const { data, error } = await supabase
       .from(BOOKS_TABLE)
-      .select('id, created_at, title, vocabList, level')
+      .select('id, created_at, title, topic, level')
       .order('created_at', { ascending: false });
     if (error) {
       console.error('Error fetching saved books:', error);
@@ -112,12 +118,14 @@ export async function getBookByIdAction(id: number): Promise<BookData | null> {
       return null;
     }
     if (!data) return null;
+    
+    // We map the 'topic' field from the DB back to 'vocabList' for the app's state
     const book: BookData = {
       title: data.title,
       author: data.author,
       pages: data.pages,
       coverIllustrationUri: data.coverIllustrationUri,
-      vocabList: data.vocabList,
+      vocabList: data.topic, // Map 'topic' back to 'vocabList'
       level: data.level,
       grammarScope: data.grammarScope,
     };
