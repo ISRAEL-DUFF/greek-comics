@@ -2,7 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import Link from 'next/link';
-import { Book, MessageSquare, StickyNote, Menu, LayoutDashboard } from 'lucide-react';
+import { Book, MessageSquare, StickyNote, Menu, LayoutDashboard, BrainCircuit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
@@ -51,21 +51,21 @@ export default function RootLayout({
                   </Link>
                 </Button>
                 <Button variant="ghost" asChild>
+                  <Link href="/vocab-memorize">
+                    <BrainCircuit className="mr-2 h-4 w-4"/>
+                    Vocab Memorize
+                  </Link>
+                </Button>
+                <Button variant="ghost" asChild>
                    <Link href="/word-expansion">
                     <StickyNote className="mr-2 h-4 w-4"/>
                     Word Expansion
                   </Link>
                 </Button>
                 <Button variant="ghost" asChild>
-                   <Link href="/notes">
-                    <StickyNote className="mr-2 h-4 w-4"/>
-                    Notes
-                  </Link>
-                </Button>
-                <Button variant="ghost" asChild>
                    <Link href="/notebook">
                     <StickyNote className="mr-2 h-4 w-4"/>
-                    notes2
+                    Notes
                   </Link>
                 </Button>
               </nav>
@@ -107,21 +107,21 @@ export default function RootLayout({
                         </Link>
                       </Button>
                       <Button variant="ghost" className="justify-start text-lg" asChild>
+                          <Link href="/vocab-memorize">
+                            <BrainCircuit className="mr-2 h-5 w-5"/>
+                            Vocab Memorize
+                          </Link>
+                        </Button>
+                      <Button variant="ghost" className="justify-start text-lg" asChild>
                          <Link href="/word-expansion">
                           <StickyNote className="mr-2 h-5 w-5"/>
                           Word Expansion
                         </Link>
                       </Button>
                       <Button variant="ghost" className="justify-start text-lg" asChild>
-                         <Link href="/notes">
-                          <StickyNote className="mr-2 h-5 w-5"/>
-                          Notes
-                        </Link>
-                      </Button>
-                      <Button variant="ghost" className="justify-start text-lg" asChild>
                          <Link href="/notebook">
                           <StickyNote className="mr-2 h-5 w-5"/>
-                          notes2
+                          Notes
                         </Link>
                       </Button>
                     </div>
