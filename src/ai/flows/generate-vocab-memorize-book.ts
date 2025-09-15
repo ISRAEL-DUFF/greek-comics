@@ -5,14 +5,17 @@
  * @fileOverview Generates a book for vocabulary memorization.
  *
  * - generateVocabMemorizeBook - A function that generates the book content iteratively.
- * - generateBookCover - A function that generates the book cover image (re-exported).
+ * - generateBookCover - A function that generates the book cover image.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { generateBookCover as originalGenerateBookCover, GenerateBookCoverOutput } from './generate-greek-book-flow';
 
-// Re-export from the original book generator flow
-export { generateBookCover } from './generate-greek-book-flow';
+
+export async function generateBookCover(bookTitle: string, bookTopic: string): Promise<GenerateBookCoverOutput> {
+    return originalGenerateBookCover(bookTitle, bookTopic);
+}
 
 
 const GenerateVocabMemorizeBookInputSchema = z.object({
