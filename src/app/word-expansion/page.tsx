@@ -587,13 +587,13 @@ function WordExpansionContent() {
                   <CardHeader className="flex-row items-start justify-between">
                       <div className="space-y-1 w-full">
                           <div className="flex items-center justify-between">
-                            <div>
+                            <div className="flex-1 min-w-0">
                               <CardTitle>Analysis</CardTitle>
                               <CardDescription>
                                 {currentWord ? `Details for "${currentWord.word}"` : 'Select or generate a word to see its analysis.'}
                               </CardDescription>
                             </div>
-                            <div className="flex items-center gap-2 flex-wrap justify-end">
+                            <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-end flex-shrink-0">
                               {/* Mobile: icon-only */}
                               <Button
                                 variant="ghost"

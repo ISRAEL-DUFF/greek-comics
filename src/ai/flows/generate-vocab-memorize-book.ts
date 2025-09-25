@@ -73,30 +73,37 @@ const generatePagePrompt = ai.definePrompt({
         previousPageText: z.string().optional(),
     })},
     output: {schema: SinglePageSchema},
-    prompt: `You are an expert in Ancient Greek language and literature. Your task is to generate a single page for a story designed to help a user memorize a list of vocabulary words.
+    prompt: `You are an expert teacher of Ancient Greek tasked with building spaced-repetition style narrative text. The reader must see every required vocabulary item repeatedly and in varied contexts while the story stays engaging and aligned with the target grammar.
 
-    **Instructions for Page {{pageNumber}}:**
+    **Context for Page {{pageNumber}}**
     - Learner Level: {{{level}}}
-    - Grammar Scope: {{{grammarScope}}}
-    - **Core Vocabulary to Repeat:** {{{vocabList}}}
+    - Grammar Scope Focus: {{{grammarScope}}}
+    - Core Vocabulary (split on commas and trim whitespace): {{{vocabList}}}
     {{#if previousPageText}}
-    - **Previous Page Content (for context and continuity):**
+    - Previous Page Text (continuity and reinforcement source):
       {{{previousPageText}}}
     {{/if}}
 
-    **Your Task:**
-    1.  Write the next page of the story. The page must contain at least two paragraphs.
-    2.  The primary goal is to **naturally and frequently repeat the words from the Core Vocabulary list**.
-    3.  If this is not the first page, continue the story from the "Previous Page Content". You should also try to re-use some important (non-core) vocabulary from the previous page to aid retention.
-    4.  The story must be engaging and coherent for the specified learner 'level' and 'grammarScope'.
-    5.  For the generated page, provide:
-        a. A 'pageNumber'.
-        b. An optional 'title' for the page.
-        c. An array of 'paragraphs', each with Greek 'text' and an English 'translation'.
-        d. A 'mainIllustrations' array with exactly TWO detailed prompts for full-color illustrations.
-        e. A 'footnotes' array with 3-5 dictionary entries for key words on the page. Each entry needs a Greek 'word', a simple Greek 'definition', and a simple 'illustrationPrompt'.
+    **Repetition Algorithm (follow exactly)**
+    1. Construct the ordered list 
+       - \`coreWords\`: every individual word from the Core Vocabulary.
+       - \`carryoverWords\`: when previous text is provided, identify the 3-5 most thematically important non-core Greek words that appeared in that text (e.g., recurring characters, objects, places). These words must continue to appear in the new page for continuity.
+    2. Plan (internally) how each paragraph will weave multiple \`coreWords\` plus any \`carryoverWords\`. Do **not** output this plan; only return the JSON response.
+    3. While writing the new page, ensure every item in \`coreWords\` appears **at least twice** across the page and never omit any item. Distribute their occurrences across the paragraphs so the repetition feels natural. Inflect the words appropriately, but keep stems recognizable for learners.
+    4. When a previous page exists, also use each \`carryoverWord\` at least once on the new page and reuse other meaningful vocabulary from the previous page when it helps retention.
 
-    You MUST return the generated page as a single JSON object matching the specified output schema.
+    **Writing Requirements**
+    - Produce at least two coherent paragraphs in Greek, suitable for the stated level and grammar scope.
+    - Each paragraph should contain multiple \`coreWords\`; avoid clustering all repetitions into a single sentence.
+    - Provide natural, line-aligned English translations for every paragraph.
+    - Maintain a clear, continuous narrative that references prior events when \`previousPageText\` is supplied.
+
+    **Structured Output**
+    - Return JSON that matches the required schema exactly.
+    - Include exactly TWO detailed, vivid prompts in \`mainIllustrations\` that highlight different moments from this page and mention some \`coreWords\` where appropriate.
+    - Provide 3-5 footnotes focusing on important Greek words from this page (prioritize \`coreWords\` and key \`carryoverWords\`). Each footnote must have a concise definition in simple Ancient Greek and a minimalist illustration prompt.
+
+    Do not output explanatory prose, plans, or markdown. Respond with a single JSON object matching the schema.
   `,
 });
 
