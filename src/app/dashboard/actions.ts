@@ -7,14 +7,12 @@ const STORY_TABLE = 'comic_stories';
 const EXPANDED_WORDS_TABLE = 'expanded_words';
 const NOTES_TABLE = 'notes';
 
-// This function will run to ensure all necessary tables exist before fetching metrics.
 async function initializeAllTables() {
     if (!supabase) {
       console.log("Supabase not configured. Skipping all database initialization.");
       return;
     };
     
-    // Series of SQL commands to ensure tables and RLS are set up.
     const commands = [
         // Create Comic Stories Table
         `CREATE TABLE IF NOT EXISTS public.${STORY_TABLE} (
@@ -28,9 +26,7 @@ async function initializeAllTables() {
             illustrations text[],
             glosses jsonb
         );`,
-        // Enable RLS on Comic Stories Table
         `ALTER TABLE public.${STORY_TABLE} ENABLE ROW LEVEL SECURITY;`,
-        // Create Policies for Comic Stories Table
         `CREATE POLICY "Allow public read access" ON public.${STORY_TABLE} FOR SELECT USING (true);`,
         `CREATE POLICY "Allow public write access" ON public.${STORY_TABLE} FOR INSERT WITH CHECK (true);`,
         `CREATE POLICY "Allow public update access" ON public.${STORY_TABLE} FOR UPDATE USING (true) WITH CHECK (true);`,
@@ -43,11 +39,10 @@ async function initializeAllTables() {
             word text NOT NULL,
             expansion text,
             language character varying,
-            lemma text
+            lemma text,
+            tags text[]
         );`,
-        // Enable RLS on Expanded Words Table
         `ALTER TABLE public.${EXPANDED_WORDS_TABLE} ENABLE ROW LEVEL SECURITY;`,
-        // Create Policies for Expanded Words Table
         `CREATE POLICY "Allow public read access" ON public.${EXPANDED_WORDS_TABLE} FOR SELECT USING (true);`,
         `CREATE POLICY "Allow public write access" ON public.${EXPANDED_WORDS_TABLE} FOR INSERT WITH CHECK (true);`,
         `CREATE POLICY "Allow public update access" ON public.${EXPANDED_WORDS_TABLE} FOR UPDATE USING (true) WITH CHECK (true);`,
@@ -61,24 +56,23 @@ async function initializeAllTables() {
             content text,
             tags text[],
             is_pinned boolean DEFAULT false,
-            folder_path text
+            folder_path text,
+            editor_type text DEFAULT 'default'::text
         );`,
-        // Enable RLS on Notes Table
         `ALTER TABLE public.${NOTES_TABLE} ENABLE ROW LEVEL SECURITY;`,
-        // Create Policies for Notes Table
         `CREATE POLICY "Allow public read access" ON public.${NOTES_TABLE} FOR SELECT USING (true);`,
         `CREATE POLICY "Allow public write access" ON public.${NOTES_TABLE} FOR INSERT WITH CHECK (true);`,
         `CREATE POLICY "Allow public update access" ON public.${NOTES_TABLE} FOR UPDATE USING (true) WITH CHECK (true);`,
         `CREATE POLICY "Allow public delete access" ON public.${NOTES_TABLE} FOR DELETE USING (true);`
     ];
 
-    // Execute each command, ignoring errors for existing objects (like policies).
     for (const command of commands) {
-        // We are using supabase.sql() which is the correct way to execute raw SQL.
-        const { error } = await supabase.rpc('execute_sql', { sql: command });
+        const { error } = await supabase.sql(command);
         if (error) {
-            // Log errors but don't stop, as some errors (like "policy already exists") are expected.
-            console.warn('Initialization command warning (might be expected):', error.message);
+            // Ignore "already exists" errors for policies and tables, but log others.
+            if (!error.message.includes('already exists')) {
+                 console.warn('Initialization command warning:', error.message);
+            }
         }
     }
     console.log('All tables database initialization check complete.');
@@ -98,11 +92,9 @@ export type DashboardMetrics = {
 };
 
 export async function getDashboardMetricsAction(): Promise<DashboardMetrics> {
-  // Ensure tables exist before trying to fetch metrics.
   await initializeAllTables();
 
   if (!supabase) {
-    // Return empty metrics if Supabase is not configured
     return {
       storyCount: 0,
       wordCount: 0,
@@ -112,7 +104,6 @@ export async function getDashboardMetricsAction(): Promise<DashboardMetrics> {
   }
 
   try {
-    // Perform all count queries in parallel
     const [
       { count: storyCount, error: storyError },
       { count: wordCount, error: wordError },
@@ -132,12 +123,9 @@ export async function getDashboardMetricsAction(): Promise<DashboardMetrics> {
         noteError,
         storiesByLevelError,
       });
-      // Decide how to handle partial errors, for now, we'll return 0s
-      // but you might want to return partial data or a more specific error.
       throw new Error('Failed to fetch some or all dashboard metrics.');
     }
 
-    // Process the stories by level data
     const levelCounts: Record<string, number> = {
       Beginner: 0,
       Intermediate: 0,
@@ -162,7 +150,6 @@ export async function getDashboardMetricsAction(): Promise<DashboardMetrics> {
     };
   } catch (error) {
     console.error('Unexpected error in getDashboardMetricsAction:', error);
-    // In case of unexpected errors, return a default/empty state
     return {
       storyCount: 0,
       wordCount: 0,
