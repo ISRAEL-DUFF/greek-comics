@@ -128,7 +128,7 @@ export default function NotebookPage() {
       if (!restored) return;
       const ids = openTabs.map(t => t.id);
       localStorage.setItem(OPEN_TAB_IDS_LS_KEY, JSON.stringify(ids));
-    } catch {}
+    } catch { }
   }, [openTabs, restored]);
 
   useEffect(() => {
@@ -139,7 +139,7 @@ export default function NotebookPage() {
       } else {
         localStorage.removeItem(ACTIVE_TAB_ID_LS_KEY);
       }
-    } catch {}
+    } catch { }
   }, [activeTabId, restored]);
 
   useEffect(() => {
@@ -202,7 +202,7 @@ export default function NotebookPage() {
       const updatedNoteData: Partial<Note> = { id: active.id, title, content, tags, editor_type: editorType };
       await updateNote(updatedNoteData);
       const updated: Note = { ...active, ...updatedNoteData };
-      
+
       setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
       setOpenTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)));
       setActive(updated); // Also update the main active state
@@ -210,7 +210,7 @@ export default function NotebookPage() {
       toast({ title: 'Saved' });
     });
   };
-  
+
   const handleEditorTypeChange = async (newType: 'default' | 'math') => {
     if (!active) return;
     setEditorType(newType);
@@ -342,11 +342,11 @@ export default function NotebookPage() {
       </form>
     );
   };
-  
+
 
   const FolderRenderer = ({ nodes }: { nodes: Record<string, FolderNode> }) => (
     <div className="w-full">
-      {Object.values(nodes).sort((a,b) => a.name.localeCompare(b.name)).map(node => (
+      {Object.values(nodes).sort((a, b) => a.name.localeCompare(b.name)).map(node => (
         <AccordionItem value={node.path} key={node.path}>
           <AccordionTrigger>
             <button
@@ -367,7 +367,7 @@ export default function NotebookPage() {
   );
 
   return (
-    <div className={cn('notebook-root flex min-h-[calc(100vh-56px)] w-full bg-slate-50 text-foreground')}> 
+    <div className={cn('notebook-root flex min-h-[calc(100vh-56px)] w-full bg-slate-50 text-foreground')}>
       <div className="notebook-gutter hidden md:block" />
       <div className="flex w-full flex-col md:flex-row">
         <aside
@@ -382,7 +382,7 @@ export default function NotebookPage() {
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" size="icon" aria-label="New Folder">
-                  <FolderPlus className="h-4 w-4"/>
+                  <FolderPlus className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -433,7 +433,7 @@ export default function NotebookPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                          <MoreVertical className="h-4 w-4"/>
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -455,7 +455,7 @@ export default function NotebookPage() {
                         </DropdownMenuSub>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setActiveTabId(n.id); remove(); }}>
-                          <Trash2 className="mr-2 h-4 w-4"/> Delete
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -521,7 +521,7 @@ export default function NotebookPage() {
                     ← Back
                   </Button>
                 )}
-                {isSaving && (<span className="inline-flex items-center text-xs text-muted-foreground"><Loader2 className="mr-1 h-3 w-3 animate-spin"/>Saving</span>)}
+                {isSaving && (<span className="inline-flex items-center text-xs text-muted-foreground"><Loader2 className="mr-1 h-3 w-3 animate-spin" />Saving</span>)}
                 <div className="flex items-center gap-2 pl-1">
                   <Switch id="lines-toggle" checked={showLines} onCheckedChange={setShowLines} />
                   <Label htmlFor="lines-toggle" className="text-xs md:text-sm text-muted-foreground">Lines</Label>
@@ -529,38 +529,38 @@ export default function NotebookPage() {
               </div>
               <div className="flex items-center gap-4">
                 {active && (
-                   <div className="flex items-center space-x-2">
-                        <Label htmlFor="editor-type-switch" className="text-xs text-muted-foreground flex items-center gap-1">
-                           {editorType === 'default' ? <Pilcrow className="h-4 w-4" /> : <Sigma className="h-4 w-4" />}
-                        </Label>
-                        <Switch id="editor-type-switch"
-                            checked={editorType === 'math'}
-                            onCheckedChange={(checked) => handleEditorTypeChange(checked ? 'math' : 'default')}
-                        />
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="editor-type-switch" className="text-xs text-muted-foreground flex items-center gap-1">
+                      {editorType === 'default' ? <Pilcrow className="h-4 w-4" /> : <Sigma className="h-4 w-4" />}
+                    </Label>
+                    <Switch id="editor-type-switch"
+                      checked={editorType === 'math'}
+                      onCheckedChange={(checked) => handleEditorTypeChange(checked ? 'math' : 'default')}
+                    />
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                    {active && (
+                  {active && (
                     <>
-                        {isEdit ? (
+                      {isEdit ? (
                         <>
-                            <Button variant="outline" size="sm" onClick={() => { setIsEdit(false); persist(); }}>
-                            <Check className="mr-1 h-4 w-4"/> Done
-                            </Button>
-                            <Button variant="default" size="sm" onClick={persist}>
-                            <Save className="mr-1 h-4 w-4"/> Save
-                            </Button>
+                          <Button variant="outline" size="sm" onClick={() => { setIsEdit(false); persist(); }}>
+                            <Check className="mr-1 h-4 w-4" /> Done
+                          </Button>
+                          <Button variant="default" size="sm" onClick={persist}>
+                            <Save className="mr-1 h-4 w-4" /> Save
+                          </Button>
                         </>
-                        ) : (
+                      ) : (
                         <Button variant="outline" size="sm" onClick={() => setIsEdit(true)}>
-                            <Edit3 className="mr-1 h-4 w-4"/> Edit
+                          <Edit3 className="mr-1 h-4 w-4" /> Edit
                         </Button>
-                        )}
-                        <Button variant="ghost" size="sm" onClick={remove} className="text-destructive hover:text-destructive">
-                        <Trash2 className="mr-1 h-4 w-4"/> Delete
-                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={remove} className="text-destructive hover:text-destructive">
+                        <Trash2 className="mr-1 h-4 w-4" /> Delete
+                      </Button>
                     </>
-                    )}
+                  )}
                 </div>
               </div>
             </div>
@@ -590,7 +590,7 @@ export default function NotebookPage() {
                           </Badge>
                         ))}
                         <div className="flex items-center gap-2">
-                          <Tags className="h-4 w-4 text-muted-foreground"/>
+                          <Tags className="h-4 w-4 text-muted-foreground" />
                           <Input
                             value={tagInput}
                             onChange={e => setTagInput(e.target.value)}
@@ -615,9 +615,9 @@ export default function NotebookPage() {
                       )}
                       <div className="prose prose-sm sm:prose max-w-none px-1">
                         {editorType === 'math' ? (
-                            <MarkdownMathjaxDisplay markdown={content || ''} />
+                          <MarkdownMathjaxDisplay markdown={content || ''} className="w-full overflow-x-auto" markdownClassName="prose max-w-none" />
                         ) : (
-                            <MarkdownDisplay markdown={content || ''} className="w-full overflow-x-auto" markdownClassName="prose max-w-none"/>
+                          <MarkdownDisplay markdown={content || ''} className="w-full overflow-x-auto" markdownClassName="prose max-w-none" />
                         )}
                       </div>
                     </>
@@ -636,4 +636,3 @@ export default function NotebookPage() {
   );
 }
 
-    
