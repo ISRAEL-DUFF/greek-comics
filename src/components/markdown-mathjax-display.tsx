@@ -1,28 +1,24 @@
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
-
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
-interface MarkdownDisplayProps {
+interface MarkdownMathjaxDisplayProps {
   markdown: string;
-  className: string;
+  className?: string;
   markdownClassName?: string;
 }
 
 import { MermaidDiagram } from './mermaid-diagram';
 
-// A component to render markdown with basic styling.
-export function MarkdownDisplay({ markdown, className, markdownClassName }: MarkdownDisplayProps) {
+export function MarkdownMathjaxDisplay({ markdown, className, markdownClassName }: MarkdownMathjaxDisplayProps) {
   return (
-    <div
-      className={markdownClassName ?? "prose prose-sm prose-p:font-body prose-headings:font-headline prose-headings:text-primary max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2 overflow-x-auto"}
-    >
-      {/* PLEASE DON'T MODIFY THE WIDTH OF THIS COMPONENT*/}
+    <div className={markdownClassName ?? "prose prose-sm prose-p:font-body prose-headings:font-headline prose-headings:text-primary max-w-none prose-table:border prose-th:border prose-td:border prose-td:p-2 prose-th:p-2 overflow-x-auto"}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        // className="w-[89vw] overflow-x-auto"
-        className={className}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeRaw, rehypeKatex]}
         components={{
           pre({ node, inline, className, children, ...props }: any) {
             return (
@@ -44,9 +40,6 @@ export function MarkdownDisplay({ markdown, className, markdownClassName }: Mark
                 // style={oneDark}
                 language={match[1]}
                 PreTag="div"
-                // className="rounded-md !bg-muted/50 border p-4"
-                // showLineNumbers={true}
-                // useInlineStyles={false}
                 {...props}
               >
                 {String(children).replace(/\n$/, '')}
@@ -58,6 +51,7 @@ export function MarkdownDisplay({ markdown, className, markdownClassName }: Mark
             );
           },
         }}
+        className={className ?? "w-full overflow-x-auto"}
       >
         {markdown}
       </ReactMarkdown>
