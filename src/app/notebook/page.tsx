@@ -527,28 +527,41 @@ export default function NotebookPage() {
                   <Label htmlFor="lines-toggle" className="text-xs md:text-sm text-muted-foreground">Lines</Label>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-4">
                 {active && (
-                  <>
-                    {isEdit ? (
-                      <>
-                        <Button variant="outline" size="sm" onClick={() => { setIsEdit(false); persist(); }}>
-                          <Check className="mr-1 h-4 w-4"/> Done
-                        </Button>
-                        <Button variant="default" size="sm" onClick={persist}>
-                          <Save className="mr-1 h-4 w-4"/> Save
-                        </Button>
-                      </>
-                    ) : (
-                      <Button variant="outline" size="sm" onClick={() => setIsEdit(true)}>
-                        <Edit3 className="mr-1 h-4 w-4"/> Edit
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={remove} className="text-destructive hover:text-destructive">
-                      <Trash2 className="mr-1 h-4 w-4"/> Delete
-                    </Button>
-                  </>
+                   <div className="flex items-center space-x-2">
+                        <Label htmlFor="editor-type-switch" className="text-xs text-muted-foreground flex items-center gap-1">
+                           {editorType === 'default' ? <Pilcrow className="h-4 w-4" /> : <Sigma className="h-4 w-4" />}
+                        </Label>
+                        <Switch id="editor-type-switch"
+                            checked={editorType === 'math'}
+                            onCheckedChange={(checked) => handleEditorTypeChange(checked ? 'math' : 'default')}
+                        />
+                  </div>
                 )}
+                <div className="flex items-center gap-2">
+                    {active && (
+                    <>
+                        {isEdit ? (
+                        <>
+                            <Button variant="outline" size="sm" onClick={() => { setIsEdit(false); persist(); }}>
+                            <Check className="mr-1 h-4 w-4"/> Done
+                            </Button>
+                            <Button variant="default" size="sm" onClick={persist}>
+                            <Save className="mr-1 h-4 w-4"/> Save
+                            </Button>
+                        </>
+                        ) : (
+                        <Button variant="outline" size="sm" onClick={() => setIsEdit(true)}>
+                            <Edit3 className="mr-1 h-4 w-4"/> Edit
+                        </Button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={remove} className="text-destructive hover:text-destructive">
+                        <Trash2 className="mr-1 h-4 w-4"/> Delete
+                        </Button>
+                    </>
+                    )}
+                </div>
               </div>
             </div>
 
@@ -587,17 +600,6 @@ export default function NotebookPage() {
                           />
                         </div>
                       </div>
-                       <div className="flex items-center space-x-2 my-4">
-                        <Label htmlFor="editor-type-switch" className="text-xs text-muted-foreground">Editor Type:</Label>
-                        <Switch id="editor-type-switch"
-                            checked={editorType === 'math'}
-                            onCheckedChange={(checked) => handleEditorTypeChange(checked ? 'math' : 'default')}
-                        />
-                         <Label htmlFor="editor-type-switch" className="flex items-center gap-1 text-xs">
-                           {editorType === 'default' ? <Pilcrow className="h-4 w-4" /> : <Sigma className="h-4 w-4" />}
-                           {editorType === 'math' ? 'Math / LaTeX' : 'Standard'}
-                         </Label>
-                      </div>
 
                       <div className="min-h-[55vh]">
                         <MarkdownEditor className="h-[55vh]" value={content} onChange={v => setContent(v || '')} />
@@ -633,3 +635,5 @@ export default function NotebookPage() {
     </div>
   );
 }
+
+    
