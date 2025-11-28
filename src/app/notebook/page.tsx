@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState, useTransition } from 'react';
@@ -37,7 +38,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 
 export default function NotebookPage() {
@@ -56,12 +56,12 @@ export default function NotebookPage() {
   const [mobileView, setMobileView] = useState<'list' | 'page'>('list');
   const [isDesktop, setIsDesktop] = useState(false);
   const [restored, setRestored] = useState(false);
-  const [newNoteEditorType, setNewNoteEditorType] = useState<'default' | 'math'>('default');
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [editorType, setEditorType] = useState<'default' | 'math'>('default');
   const [selectedFolder, setSelectedFolder] = useState<'all' | 'unfiled' | string>('all');
 
   const prevId = useRef<number | undefined>(undefined);
@@ -96,30 +96,6 @@ export default function NotebookPage() {
               setMobileView('page');
               return;
             }
-          }
-        }
-
-        const raw = localStorage.getItem(OPEN_TABS_LS_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw) as Note[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setOpenTabs(parsed);
-            setActiveTabId(parsed[parsed.length - 1].id);
-            localStorage.setItem(OPEN_TAB_IDS_LS_KEY, JSON.stringify(parsed.map(p => p.id)));
-            localStorage.setItem(ACTIVE_TAB_ID_LS_KEY, String(parsed[parsed.length - 1].id));
-            setMobileView('page');
-            return;
-          }
-        }
-
-        if (list.length > 0) {
-          const full = await getNoteById(list[0].id);
-          if (full) {
-            setOpenTabs([full]);
-            setActiveTabId(full.id);
-            localStorage.setItem(OPEN_TAB_IDS_LS_KEY, JSON.stringify([full.id]));
-            localStorage.setItem(ACTIVE_TAB_ID_LS_KEY, String(full.id));
-            if (mq?.matches) setMobileView('page');
           }
         }
       } catch {
@@ -181,6 +157,7 @@ export default function NotebookPage() {
       setTitle(active.title || '');
       setContent(active.content || '');
       setTags(active.tags || []);
+      setEditorType(active.editor_type || 'default');
       setIsEdit(false);
       prevId.current = active.id;
     }
@@ -207,8 +184,8 @@ export default function NotebookPage() {
     }
   };
 
-  const createNew = async () => {
-    const note = await createNote('Untitled Note', null, newNoteEditorType);
+  const createNew = async (editorType: 'default' | 'math' = 'default') => {
+    const note = await createNote('Untitled Note', null, editorType);
     if (note) {
       setNotes(prev => [note, ...prev]);
       addTabAndActivate(note);
@@ -222,12 +199,28 @@ export default function NotebookPage() {
   const persist = async () => {
     if (!active) return;
     startSaving(async () => {
-      await updateNote({ id: active.id, title, content, tags });
-      const updated: Note = { ...active, title, content, tags };
+      const updatedNoteData: Partial<Note> = { id: active.id, title, content, tags, editor_type: editorType };
+      await updateNote(updatedNoteData);
+      const updated: Note = { ...active, ...updatedNoteData };
+      
+      setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
+      setOpenTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      setActive(updated); // Also update the main active state
+
+      toast({ title: 'Saved' });
+    });
+  };
+  
+  const handleEditorTypeChange = async (newType: 'default' | 'math') => {
+    if (!active) return;
+    setEditorType(newType);
+    startSaving(async () => {
+      await updateNote({ id: active.id, editor_type: newType });
+      const updated: Note = { ...active, editor_type: newType };
       setActive(updated);
       setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
       setOpenTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)));
-      toast({ title: 'Saved' });
+      toast({ title: 'Editor type updated' });
     });
   };
 
@@ -295,13 +288,12 @@ export default function NotebookPage() {
   const handleMoveNote = async (noteId: number, folderPath: string | null) => {
     await updateNote({ id: noteId, folder_path: folderPath });
     setNotes(prev => prev.map(n => (n.id === noteId ? { ...n, folder_path: folderPath } : n)));
-    setFiltered(prev => prev.map(n => (n.id === noteId ? { ...n, folder_path: folderPath } : n)));
     setActive(prev => (prev?.id === noteId ? { ...(prev as Note), folder_path: folderPath } : prev));
     toast({ title: 'Note moved' });
   };
 
   const createFolderWithNote = async (path: string) => {
-    const note = await createNote('Untitled Note', path, newNoteEditorType);
+    const note = await createNote('Untitled Note', path);
     if (note) {
       setNotes(prev => [note, ...prev]);
       addTabAndActivate(note);
@@ -351,30 +343,6 @@ export default function NotebookPage() {
     );
   };
   
-  const NewNoteDialog = () => (
-    <>
-      <DialogHeader>
-        <DialogTitle>Create New Note</DialogTitle>
-        <DialogDescription>Choose the type of editor for your new note.</DialogDescription>
-      </DialogHeader>
-      <div className="py-4">
-        <RadioGroup defaultValue="default" onValueChange={(value: 'default' | 'math') => setNewNoteEditorType(value)}>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="default" id="r1" />
-            <Label htmlFor="r1" className="flex items-center gap-2 cursor-pointer"><Pilcrow className="h-4 w-4" /> Standard Editor</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="math" id="r2" />
-            <Label htmlFor="r2" className="flex items-center gap-2 cursor-pointer"><Sigma className="h-4 w-4" /> Math/LaTeX Editor</Label>
-          </div>
-        </RadioGroup>
-      </div>
-      <DialogFooter>
-        <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
-        <DialogClose asChild><Button onClick={createNew}><Plus className="mr-2 h-4 w-4" />Create</Button></DialogClose>
-      </DialogFooter>
-    </>
-  );
 
   const FolderRenderer = ({ nodes }: { nodes: Record<string, FolderNode> }) => (
     <div className="w-full">
@@ -410,12 +378,7 @@ export default function NotebookPage() {
           )}
         >
           <div className="flex items-center gap-2 p-3 border-b">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="gap-2"><Plus className="h-4 w-4" /> New</Button>
-              </DialogTrigger>
-              <DialogContent><NewNoteDialog /></DialogContent>
-            </Dialog>
+            <Button className="gap-2" onClick={() => createNew()}><Plus className="h-4 w-4" /> New</Button>
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" size="icon" aria-label="New Folder">
@@ -491,7 +454,7 @@ export default function NotebookPage() {
                           </DropdownMenuPortal>
                         </DropdownMenuSub>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setActive(n); remove(); }}>
+                        <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setActiveTabId(n.id); remove(); }}>
                           <Trash2 className="mr-2 h-4 w-4"/> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -569,7 +532,7 @@ export default function NotebookPage() {
                   <>
                     {isEdit ? (
                       <>
-                        <Button variant="outline" size="sm" onClick={() => setIsEdit(false)}>
+                        <Button variant="outline" size="sm" onClick={() => { setIsEdit(false); persist(); }}>
                           <Check className="mr-1 h-4 w-4"/> Done
                         </Button>
                         <Button variant="default" size="sm" onClick={persist}>
@@ -624,6 +587,18 @@ export default function NotebookPage() {
                           />
                         </div>
                       </div>
+                       <div className="flex items-center space-x-2 my-4">
+                        <Label htmlFor="editor-type-switch" className="text-xs text-muted-foreground">Editor Type:</Label>
+                        <Switch id="editor-type-switch"
+                            checked={editorType === 'math'}
+                            onCheckedChange={(checked) => handleEditorTypeChange(checked ? 'math' : 'default')}
+                        />
+                         <Label htmlFor="editor-type-switch" className="flex items-center gap-1 text-xs">
+                           {editorType === 'default' ? <Pilcrow className="h-4 w-4" /> : <Sigma className="h-4 w-4" />}
+                           {editorType === 'math' ? 'Math / LaTeX' : 'Standard'}
+                         </Label>
+                      </div>
+
                       <div className="min-h-[55vh]">
                         <MarkdownEditor className="h-[55vh]" value={content} onChange={v => setContent(v || '')} />
                       </div>
@@ -637,7 +612,7 @@ export default function NotebookPage() {
                         </div>
                       )}
                       <div className="prose prose-sm sm:prose max-w-none px-1">
-                        {active.editor_type === 'math' ? (
+                        {editorType === 'math' ? (
                             <MarkdownMathjaxDisplay markdown={content || ''} />
                         ) : (
                             <MarkdownDisplay markdown={content || ''} className="w-full overflow-x-auto" markdownClassName="prose max-w-none"/>
@@ -651,12 +626,7 @@ export default function NotebookPage() {
           </div>
 
           <div className="md:hidden fixed bottom-6 right-6">
-             <Dialog>
-              <DialogTrigger asChild>
-                <Button className="h-12 w-12 rounded-full shadow-lg" size="icon"><Plus className="h-6 w-6" /></Button>
-              </DialogTrigger>
-              <DialogContent><NewNoteDialog /></DialogContent>
-            </Dialog>
+            <Button onClick={() => createNew()} className="h-12 w-12 rounded-full shadow-lg" size="icon"><Plus className="h-6 w-6" /></Button>
           </div>
         </section>
       </div>
