@@ -12,6 +12,7 @@ const NoteSchema = z.object({
   tags: z.array(z.string()).optional(),
   is_pinned: z.boolean().optional(),
   folder_path: z.string().nullable().optional(),
+  editor_type: z.string().optional(), // 'default' or 'math'
 });
 
 export type Note = {
@@ -22,6 +23,7 @@ export type Note = {
     tags: string[];
     is_pinned: boolean;
     folder_path: string | null;
+    editor_type: 'default' | 'math';
 };
 
 const NOTES_TABLE = 'notes';
@@ -58,12 +60,16 @@ export async function getNoteById(id: number): Promise<Note | null> {
     return data;
 }
 
-export async function createNote(title: string, folderPath: string | null = null): Promise<Note | null> {
+export async function createNote(
+  title: string, 
+  folderPath: string | null = null,
+  editorType: 'default' | 'math' = 'default'
+): Promise<Note | null> {
   if (!supabase) return null;
 
   const { data, error } = await supabase
     .from(NOTES_TABLE)
-    .insert({ title, content: '', tags: [], folder_path: folderPath })
+    .insert({ title, content: '', tags: [], folder_path: folderPath, editor_type: editorType })
     .select()
     .single();
 

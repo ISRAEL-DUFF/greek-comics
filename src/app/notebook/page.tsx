@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState, useTransition } from 'react';
@@ -9,8 +10,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { MarkdownEditor } from '@/components/markdown-editor';
 import { MarkdownDisplay } from '@/components/markdown-display';
+import { MarkdownMathjaxDisplay } from '@/components/markdown-mathjax-display';
 import { cn } from '@/lib/utils';
-import { Plus, Search, Edit3, Check, Trash2, Save, Loader2, Tags, MoreVertical, Folder as FolderIcon, FolderPlus } from 'lucide-react';
+import { Plus, Search, Edit3, Check, Trash2, Save, Loader2, Tags, MoreVertical, Folder as FolderIcon, FolderPlus, Sigma, Pilcrow } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import './notebook.css';
@@ -37,6 +39,7 @@ import {
   DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 
+
 export default function NotebookPage() {
   const { toast } = useToast();
 
@@ -49,26 +52,24 @@ export default function NotebookPage() {
   const [isSaving, startSaving] = useTransition();
   const [query, setQuery] = useState('');
   const [isEdit, setIsEdit] = useState(false);
-  const [showLines, setShowLines] = useState(false); // off by default
-  // Mobile view state: 'list' or 'page'
+  const [showLines, setShowLines] = useState(false);
   const [mobileView, setMobileView] = useState<'list' | 'page'>('list');
   const [isDesktop, setIsDesktop] = useState(false);
   const [restored, setRestored] = useState(false);
 
-  // Editable fields
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [editorType, setEditorType] = useState<'default' | 'math'>('default');
   const [selectedFolder, setSelectedFolder] = useState<'all' | 'unfiled' | string>('all');
 
   const prevId = useRef<number | undefined>(undefined);
-  const OPEN_TABS_LS_KEY = 'notebook.openTabs.v1'; // legacy (array of Note)
-  const OPEN_TAB_IDS_LS_KEY = 'notebook.openTabIds.v1'; // new (array of ids)
+  const OPEN_TABS_LS_KEY = 'notebook.openTabs.v1';
+  const OPEN_TAB_IDS_LS_KEY = 'notebook.openTabIds.v1';
   const ACTIVE_TAB_ID_LS_KEY = 'notebook.activeTabId.v1';
 
   useEffect(() => {
-    // Track viewport to decide desktop vs mobile behavior
     const mq = typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)') : null;
     const handle = () => setIsDesktop(!!mq?.matches);
     handle();
@@ -80,7 +81,6 @@ export default function NotebookPage() {
       setNotes(list);
       setIsLoading(false);
 
-      // Restore open tabs (prefer IDs-based storage)
       try {
         const idsRaw = localStorage.getItem(OPEN_TAB_IDS_LS_KEY);
         if (idsRaw) {
@@ -94,34 +94,8 @@ export default function NotebookPage() {
               const candidate = tabs.find(t => t.id === storedActive)?.id ?? tabs[tabs.length - 1].id;
               setActiveTabId(candidate);
               setMobileView('page');
-              return; // done
+              return;
             }
-          }
-        }
-
-        // Legacy: restore full notes array if present, and migrate to IDs
-        const raw = localStorage.getItem(OPEN_TABS_LS_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw) as Note[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setOpenTabs(parsed);
-            setActiveTabId(parsed[parsed.length - 1].id);
-            localStorage.setItem(OPEN_TAB_IDS_LS_KEY, JSON.stringify(parsed.map(p => p.id)));
-            localStorage.setItem(ACTIVE_TAB_ID_LS_KEY, String(parsed[parsed.length - 1].id));
-            setMobileView('page');
-            return;
-          }
-        }
-
-        // Fallback: open most recent on desktop only
-        if (list.length > 0) {
-          const full = await getNoteById(list[0].id);
-          if (full) {
-            setOpenTabs([full]);
-            setActiveTabId(full.id);
-            localStorage.setItem(OPEN_TAB_IDS_LS_KEY, JSON.stringify([full.id]));
-            localStorage.setItem(ACTIVE_TAB_ID_LS_KEY, String(full.id));
-            if (mq?.matches) setMobileView('page');
           }
         }
       } catch {
@@ -149,7 +123,6 @@ export default function NotebookPage() {
     }
   }, [notes, query]);
 
-  // Persist open tab IDs (after initial restore)
   useEffect(() => {
     try {
       if (!restored) return;
@@ -158,7 +131,6 @@ export default function NotebookPage() {
     } catch {}
   }, [openTabs, restored]);
 
-  // Persist active tab id (after initial restore)
   useEffect(() => {
     try {
       if (!restored) return;
@@ -170,7 +142,6 @@ export default function NotebookPage() {
     } catch {}
   }, [activeTabId, restored]);
 
-  // Derive active note from activeTabId
   useEffect(() => {
     if (activeTabId == null) {
       setActive(null);
@@ -180,13 +151,13 @@ export default function NotebookPage() {
     setActive(n);
   }, [activeTabId, openTabs]);
 
-  // Load editor state on active change
   useEffect(() => {
     if (!active) return;
     if (prevId.current !== active.id) {
       setTitle(active.title || '');
       setContent(active.content || '');
       setTags(active.tags || []);
+      setEditorType(active.editor_type || 'default');
       setIsEdit(false);
       prevId.current = active.id;
     }
@@ -213,8 +184,8 @@ export default function NotebookPage() {
     }
   };
 
-  const createNew = async () => {
-    const note = await createNote('Untitled Note');
+  const createNew = async (editorType: 'default' | 'math' = 'default') => {
+    const note = await createNote('Untitled Note', null, editorType);
     if (note) {
       setNotes(prev => [note, ...prev]);
       addTabAndActivate(note);
@@ -228,12 +199,28 @@ export default function NotebookPage() {
   const persist = async () => {
     if (!active) return;
     startSaving(async () => {
-      await updateNote({ id: active.id, title, content, tags });
-      const updated: Note = { ...active, title, content, tags };
+      const updatedNoteData: Partial<Note> = { id: active.id, title, content, tags, editor_type: editorType };
+      await updateNote(updatedNoteData);
+      const updated: Note = { ...active, ...updatedNoteData };
+      
+      setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
+      setOpenTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      setActive(updated); // Also update the main active state
+
+      toast({ title: 'Saved' });
+    });
+  };
+  
+  const handleEditorTypeChange = async (newType: 'default' | 'math') => {
+    if (!active) return;
+    setEditorType(newType);
+    startSaving(async () => {
+      await updateNote({ id: active.id, editor_type: newType });
+      const updated: Note = { ...active, editor_type: newType };
       setActive(updated);
       setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
       setOpenTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)));
-      toast({ title: 'Saved' });
+      toast({ title: 'Editor type updated' });
     });
   };
 
@@ -241,7 +228,6 @@ export default function NotebookPage() {
     if (!active) return;
     await deleteNote(active.id);
     setNotes(prev => prev.filter(n => n.id !== active.id));
-    // close from tabs
     closeTab(active.id, true);
     toast({ title: 'Note deleted' });
   };
@@ -273,7 +259,6 @@ export default function NotebookPage() {
     });
   };
 
-  // ----- Folder helpers -----
   type FolderNode = { name: string; path: string; children: Record<string, FolderNode> };
   const { folderTree, allFolderPaths } = React.useMemo(() => {
     const tree: Record<string, FolderNode> = {};
@@ -303,7 +288,6 @@ export default function NotebookPage() {
   const handleMoveNote = async (noteId: number, folderPath: string | null) => {
     await updateNote({ id: noteId, folder_path: folderPath });
     setNotes(prev => prev.map(n => (n.id === noteId ? { ...n, folder_path: folderPath } : n)));
-    setFiltered(prev => prev.map(n => (n.id === noteId ? { ...n, folder_path: folderPath } : n)));
     setActive(prev => (prev?.id === noteId ? { ...(prev as Note), folder_path: folderPath } : prev));
     toast({ title: 'Note moved' });
   };
@@ -358,6 +342,7 @@ export default function NotebookPage() {
       </form>
     );
   };
+  
 
   const FolderRenderer = ({ nodes }: { nodes: Record<string, FolderNode> }) => (
     <div className="w-full">
@@ -383,12 +368,8 @@ export default function NotebookPage() {
 
   return (
     <div className={cn('notebook-root flex min-h-[calc(100vh-56px)] w-full bg-slate-50 text-foreground')}> 
-      {/* Spiral gutter only on desktop */}
       <div className="notebook-gutter hidden md:block" />
-
-      {/* Mobile-first stacked layout */}
       <div className="flex w-full flex-col md:flex-row">
-        {/* List panel */}
         <aside
           className={cn(
             'border-b bg-white/70 backdrop-blur-sm md:border-b-0 md:border-r',
@@ -397,9 +378,7 @@ export default function NotebookPage() {
           )}
         >
           <div className="flex items-center gap-2 p-3 border-b">
-            <Button onClick={createNew} className="gap-2">
-              <Plus className="h-4 w-4" /> New
-            </Button>
+            <Button className="gap-2" onClick={() => createNew()}><Plus className="h-4 w-4" /> New</Button>
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" size="icon" aria-label="New Folder">
@@ -422,7 +401,6 @@ export default function NotebookPage() {
 
           <ScrollArea className="soft-scrollbars h-[calc(100svh-56px-49px)] md:h-[calc(100vh-56px-49px)]">
             <div className="p-2 space-y-3">
-              {/* Folder filter */}
               <Accordion type="multiple" defaultValue={[...allFolderPaths]} className="w-full">
                 <div className="flex items-center gap-2 px-1">
                   <Button size="sm" variant={selectedFolder === 'all' ? 'default' : 'outline'} onClick={() => setSelectedFolder('all')}>All</Button>
@@ -476,7 +454,7 @@ export default function NotebookPage() {
                           </DropdownMenuPortal>
                         </DropdownMenuSub>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setActive(n); remove(); }}>
+                        <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setActiveTabId(n.id); remove(); }}>
                           <Trash2 className="mr-2 h-4 w-4"/> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -496,7 +474,6 @@ export default function NotebookPage() {
           </ScrollArea>
         </aside>
 
-        {/* Paper page */}
         <section
           className={cn(
             'flex-1 py-4 px-3 md:py-6 md:px-8 lg:px-12',
@@ -504,7 +481,6 @@ export default function NotebookPage() {
             'md:block'
           )}
         >
-          {/* Tabs bar */}
           {openTabs.length > 0 && (
             <div className="mb-2">
               <div className="w-full overflow-x-auto">
@@ -538,7 +514,6 @@ export default function NotebookPage() {
           )}
 
           <div className={cn('paper rounded-xl overflow-hidden', showLines && 'lined')}>
-            {/* Toolbar with back button on mobile */}
             <div className="flex items-center justify-between gap-2 border-b bg-white/70 px-2 py-2 backdrop-blur-sm md:px-4">
               <div className="flex items-center gap-3">
                 {!isDesktop && (
@@ -547,38 +522,49 @@ export default function NotebookPage() {
                   </Button>
                 )}
                 {isSaving && (<span className="inline-flex items-center text-xs text-muted-foreground"><Loader2 className="mr-1 h-3 w-3 animate-spin"/>Saving</span>)}
-                {/* Lines toggle */}
                 <div className="flex items-center gap-2 pl-1">
                   <Switch id="lines-toggle" checked={showLines} onCheckedChange={setShowLines} />
                   <Label htmlFor="lines-toggle" className="text-xs md:text-sm text-muted-foreground">Lines</Label>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-4">
                 {active && (
-                  <>
-                    {isEdit ? (
-                      <>
-                        <Button variant="outline" size="sm" onClick={() => setIsEdit(false)}>
-                          <Check className="mr-1 h-4 w-4"/> Done
-                        </Button>
-                        <Button variant="default" size="sm" onClick={persist}>
-                          <Save className="mr-1 h-4 w-4"/> Save
-                        </Button>
-                      </>
-                    ) : (
-                      <Button variant="outline" size="sm" onClick={() => setIsEdit(true)}>
-                        <Edit3 className="mr-1 h-4 w-4"/> Edit
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={remove} className="text-destructive hover:text-destructive">
-                      <Trash2 className="mr-1 h-4 w-4"/> Delete
-                    </Button>
-                  </>
+                   <div className="flex items-center space-x-2">
+                        <Label htmlFor="editor-type-switch" className="text-xs text-muted-foreground flex items-center gap-1">
+                           {editorType === 'default' ? <Pilcrow className="h-4 w-4" /> : <Sigma className="h-4 w-4" />}
+                        </Label>
+                        <Switch id="editor-type-switch"
+                            checked={editorType === 'math'}
+                            onCheckedChange={(checked) => handleEditorTypeChange(checked ? 'math' : 'default')}
+                        />
+                  </div>
                 )}
+                <div className="flex items-center gap-2">
+                    {active && (
+                    <>
+                        {isEdit ? (
+                        <>
+                            <Button variant="outline" size="sm" onClick={() => { setIsEdit(false); persist(); }}>
+                            <Check className="mr-1 h-4 w-4"/> Done
+                            </Button>
+                            <Button variant="default" size="sm" onClick={persist}>
+                            <Save className="mr-1 h-4 w-4"/> Save
+                            </Button>
+                        </>
+                        ) : (
+                        <Button variant="outline" size="sm" onClick={() => setIsEdit(true)}>
+                            <Edit3 className="mr-1 h-4 w-4"/> Edit
+                        </Button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={remove} className="text-destructive hover:text-destructive">
+                        <Trash2 className="mr-1 h-4 w-4"/> Delete
+                        </Button>
+                    </>
+                    )}
+                </div>
               </div>
             </div>
 
-            {/* Lined paper content */}
             <div className="paper-content">
               {!active ? (
                 <div className="p-10 text-center text-muted-foreground">
@@ -614,6 +600,7 @@ export default function NotebookPage() {
                           />
                         </div>
                       </div>
+
                       <div className="min-h-[55vh]">
                         <MarkdownEditor className="h-[55vh]" value={content} onChange={v => setContent(v || '')} />
                       </div>
@@ -627,7 +614,11 @@ export default function NotebookPage() {
                         </div>
                       )}
                       <div className="prose prose-sm sm:prose max-w-none px-1">
-                        <MarkdownDisplay markdown={content} className="w-full overflow-x-auto" markdownClassName="prose max-w-none"/>
+                        {editorType === 'math' ? (
+                            <MarkdownMathjaxDisplay markdown={content || ''} />
+                        ) : (
+                            <MarkdownDisplay markdown={content || ''} className="w-full overflow-x-auto" markdownClassName="prose max-w-none"/>
+                        )}
                       </div>
                     </>
                   )}
@@ -636,14 +627,13 @@ export default function NotebookPage() {
             </div>
           </div>
 
-          {/* Mobile floating action button for new note */}
           <div className="md:hidden fixed bottom-6 right-6">
-            <Button onClick={createNew} className="h-12 w-12 rounded-full shadow-lg" size="icon">
-              <Plus className="h-6 w-6" />
-            </Button>
+            <Button onClick={() => createNew()} className="h-12 w-12 rounded-full shadow-lg" size="icon"><Plus className="h-6 w-6" /></Button>
           </div>
         </section>
       </div>
     </div>
   );
 }
+
+    
