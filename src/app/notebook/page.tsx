@@ -1,8 +1,8 @@
-
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { getNotes, getNoteById, createNote, updateNote, deleteNote, type Note } from '@/app/notes/actions';
+import { Plus, Search, Edit3, Check, Trash2, Save, Loader2, Tags, MoreVertical, Folder as FolderIcon, FolderPlus, Sigma, Pilcrow, Book } from 'lucide-react';
+import { getNotes, getNoteById, createNote, updateNote, deleteNote, type Note, type NotebookBook, getNotebookBooks, createNotebookBook, updateNotebookBook, deleteNotebookBook } from '@/app/notes/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,7 @@ import { MarkdownEditor } from '@/components/markdown-editor';
 import { MarkdownDisplay } from '@/components/markdown-display';
 import { MarkdownMathjaxDisplay } from '@/components/markdown-mathjax-display';
 import { cn } from '@/lib/utils';
-import { Plus, Search, Edit3, Check, Trash2, Save, Loader2, Tags, MoreVertical, Folder as FolderIcon, FolderPlus, Sigma, Pilcrow } from 'lucide-react';
+import { BookView } from '@/components/book-view';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import './notebook.css';
@@ -38,16 +38,21 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// ... existing imports
 
 
 export default function NotebookPage() {
   const { toast } = useToast();
 
   const [notes, setNotes] = useState<Note[]>([]);
-  const [filtered, setFiltered] = useState<Note[]>([]);
-  const [active, setActive] = useState<Note | null>(null);
-  const [openTabs, setOpenTabs] = useState<Note[]>([]);
-  const [activeTabId, setActiveTabId] = useState<number | null>(null);
+  const [books, setBooks] = useState<NotebookBook[]>([]);
+  const [filtered, setFiltered] = useState<(Note | NotebookBook)[]>([]);
+  const [active, setActive] = useState<Note | NotebookBook | null>(null);
+  const [openTabs, setOpenTabs] = useState<(Note | NotebookBook)[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, startSaving] = useTransition();
   const [query, setQuery] = useState('');
@@ -61,7 +66,7 @@ export default function NotebookPage() {
   const [content, setContent] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
-  const [editorType, setEditorType] = useState<'default' | 'math'>('default');
+  const [editorType, setEditorType] = useState<'default' | 'math' | 'book'>('default');
   const [selectedFolder, setSelectedFolder] = useState<'all' | 'unfiled' | string>('all');
 
   const prevId = useRef<number | undefined>(undefined);
@@ -77,22 +82,45 @@ export default function NotebookPage() {
 
     (async () => {
       setIsLoading(true);
-      const list = await getNotes();
-      setNotes(list);
+      const [notesList, booksList] = await Promise.all([getNotes(), getNotebookBooks()]);
+      setNotes(notesList);
+      setBooks(booksList);
       setIsLoading(false);
 
       try {
         const idsRaw = localStorage.getItem(OPEN_TAB_IDS_LS_KEY);
         if (idsRaw) {
-          const idsParsed = JSON.parse(idsRaw) as number[];
+          const idsParsed = JSON.parse(idsRaw);
           if (Array.isArray(idsParsed) && idsParsed.length > 0) {
-            const fetched = await Promise.all(idsParsed.map(id => getNoteById(id)));
-            const tabs = fetched.filter((n): n is Note => !!n);
-            if (tabs.length > 0) {
-              setOpenTabs(tabs);
-              const storedActive = Number(localStorage.getItem(ACTIVE_TAB_ID_LS_KEY) || '');
-              const candidate = tabs.find(t => t.id === storedActive)?.id ?? tabs[tabs.length - 1].id;
-              setActiveTabId(candidate);
+            const restoredTabs: (Note | NotebookBook)[] = [];
+            for (const item of idsParsed) {
+              if (typeof item === 'number') {
+                const n = notesList.find(n => n.id === item);
+                if (n) restoredTabs.push(n);
+              } else if (typeof item === 'string') {
+                const [type, idStr] = item.split('-');
+                const id = parseInt(idStr);
+                if (type === 'note') {
+                  const n = notesList.find(n => n.id === id);
+                  if (n) restoredTabs.push(n);
+                } else if (type === 'book') {
+                  const b = booksList.find(b => b.id === id);
+                  if (b) restoredTabs.push(b);
+                }
+              }
+            }
+
+            if (restoredTabs.length > 0) {
+              setOpenTabs(restoredTabs);
+              const storedActive = localStorage.getItem(ACTIVE_TAB_ID_LS_KEY);
+              let candidateId = storedActive;
+              if (storedActive && !isNaN(Number(storedActive)) && !storedActive.includes('-')) {
+                candidateId = `note-${storedActive}`;
+              }
+
+              const candidate = restoredTabs.find(t => getTabId(t) === candidateId) || restoredTabs[restoredTabs.length - 1];
+              if (candidate) setActiveTabId(getTabId(candidate));
+
               setMobileView('page');
               return;
             }
@@ -110,23 +138,25 @@ export default function NotebookPage() {
 
   useEffect(() => {
     const q = query.trim().toLowerCase();
+    const allItems = [...books, ...notes].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
     if (!q) {
-      setFiltered(notes);
+      setFiltered(allItems);
     } else {
       setFiltered(
-        notes.filter(n =>
+        allItems.filter(n =>
           (n.title || '').toLowerCase().includes(q) ||
-          (n.content || '').toLowerCase().includes(q) ||
-          (n.tags || []).some(t => (t || '').toLowerCase().includes(q))
+          ('content' in n && (n.content || '').toLowerCase().includes(q)) ||
+          ('tags' in n && (n.tags as string[] || []).some(t => (t || '').toLowerCase().includes(q)))
         )
       );
     }
-  }, [notes, query]);
+  }, [notes, books, query]);
 
   useEffect(() => {
     try {
       if (!restored) return;
-      const ids = openTabs.map(t => t.id);
+      const ids = openTabs.map(t => getTabId(t));
       localStorage.setItem(OPEN_TAB_IDS_LS_KEY, JSON.stringify(ids));
     } catch { }
   }, [openTabs, restored]);
@@ -135,19 +165,21 @@ export default function NotebookPage() {
     try {
       if (!restored) return;
       if (activeTabId != null) {
-        localStorage.setItem(ACTIVE_TAB_ID_LS_KEY, String(activeTabId));
+        localStorage.setItem(ACTIVE_TAB_ID_LS_KEY, activeTabId);
       } else {
         localStorage.removeItem(ACTIVE_TAB_ID_LS_KEY);
       }
     } catch { }
   }, [activeTabId, restored]);
 
+  const getTabId = (item: Note | NotebookBook) => 'content' in item ? `note-${item.id}` : `book-${item.id}`;
+
   useEffect(() => {
     if (activeTabId == null) {
       setActive(null);
       return;
     }
-    const n = openTabs.find(t => t.id === activeTabId) || null;
+    const n = openTabs.find(t => getTabId(t) === activeTabId) || null;
     setActive(n);
   }, [activeTabId, openTabs]);
 
@@ -155,64 +187,226 @@ export default function NotebookPage() {
     if (!active) return;
     if (prevId.current !== active.id) {
       setTitle(active.title || '');
-      setContent(active.content || '');
-      setTags(active.tags || []);
-      setEditorType(active.editor_type || 'default');
+      if ('content' in active) {
+        setContent(active.content || '');
+        setTags(active.tags || []);
+        setEditorType(active.editor_type || 'default');
+      } else {
+        // It's a book
+        setContent('');
+        setTags([]);
+        setEditorType('book');
+      }
       setIsEdit(false);
       prevId.current = active.id;
     }
   }, [active]);
 
-  const addTabAndActivate = (note: Note) => {
-    setOpenTabs(prev => (prev.some(p => p.id === note.id) ? prev : [...prev, note]));
-    setActiveTabId(note.id);
+  const addTabAndActivate = (item: Note | NotebookBook) => {
+    setOpenTabs(prev => (prev.some(p => p.id === item.id && ('content' in p) === ('content' in item)) ? prev : [...prev, item]));
+    setActiveTabId(getTabId(item));
   };
 
-  const openNote = async (id: number) => {
-    const exists = openTabs.find(t => t.id === id);
-    if (exists) {
-      setActiveTabId(id);
-      setMobileView('page');
-      return;
-    }
-    const full = await getNoteById(id);
-    if (full) {
-      addTabAndActivate(full);
-      setMobileView('page');
-    } else {
-      toast({ variant: 'destructive', title: 'Failed to open note' });
-    }
+
+
+  const openItem = (item: Note | NotebookBook) => {
+    addTabAndActivate(item);
+    setMobileView('page');
   };
 
-  const createNew = async (editorType: 'default' | 'math' = 'default') => {
-    const note = await createNote('Untitled Note', null, editorType);
-    if (note) {
-      setNotes(prev => [note, ...prev]);
-      addTabAndActivate(note);
-      setIsEdit(true);
-      toast({ title: 'New note created' });
-    } else {
-      toast({ variant: 'destructive', title: 'Failed to create note' });
-    }
+  const [isCreationDialogOpen, setIsCreationDialogOpen] = useState(false);
+  const [creationType, setCreationType] = useState<'note' | 'book'>('note');
+
+  const NewCreationDialog = () => {
+    const [localTitle, setLocalTitle] = useState('');
+    const [localEditorType, setLocalEditorType] = useState<'default' | 'math'>('default');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!localTitle.trim()) return;
+      setIsSubmitting(true);
+
+      if (creationType === 'book') {
+        const book = await createNotebookBook(localTitle);
+        if (book) {
+          setBooks(prev => [book, ...prev]);
+          addTabAndActivate(book);
+          toast({ title: 'New book created' });
+          setIsCreationDialogOpen(false);
+        } else {
+          toast({ variant: 'destructive', title: 'Failed to create book' });
+        }
+      } else {
+        const note = await createNote(localTitle, null, localEditorType);
+        if (note) {
+          setNotes(prev => [note, ...prev]);
+          addTabAndActivate(note);
+          setIsEdit(true);
+          toast({ title: 'New note created' });
+          setIsCreationDialogOpen(false);
+        } else {
+          toast({ variant: 'destructive', title: 'Failed to create note' });
+        }
+      }
+      setIsSubmitting(false);
+    };
+
+    return (
+      <Dialog open={isCreationDialogOpen} onOpenChange={setIsCreationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New {creationType === 'book' ? 'Book' : 'Note'}</DialogTitle>
+            <DialogDescription>Enter a title for your new {creationType}.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title">Title</Label>
+                <Input id="title" value={localTitle} onChange={e => setLocalTitle(e.target.value)} placeholder={`My New ${creationType === 'book' ? 'Book' : 'Note'}`} autoFocus />
+              </div>
+              {creationType === 'note' && (
+                <div className="grid gap-2">
+                  <Label>Editor Type</Label>
+                  <RadioGroup value={localEditorType} onValueChange={(v: 'default' | 'math') => setLocalEditorType(v)} className="flex gap-4">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="default" id="r-default" />
+                      <Label htmlFor="r-default">Default (Markdown)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="math" id="r-math" />
+                      <Label htmlFor="r-math">Math (MathJax)</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setIsCreationDialogOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={!localTitle.trim() || isSubmitting}>Create</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+  const [moveNoteId, setMoveNoteId] = useState<number | null>(null);
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+
+  const MoveToBookDialog = () => {
+    const [selectedBookId, setSelectedBookId] = useState<string>('new');
+    const [newBookTitle, setNewBookTitle] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleMove = async () => {
+      if (!moveNoteId) return;
+      setIsSubmitting(true);
+
+      let targetBookId: number;
+
+      if (selectedBookId === 'new') {
+        if (!newBookTitle.trim()) return;
+        const newBook = await createNotebookBook(newBookTitle);
+        if (!newBook) {
+          toast({ variant: 'destructive', title: 'Failed to create book' });
+          setIsSubmitting(false);
+          return;
+        }
+        setBooks(prev => [newBook, ...prev]);
+        targetBookId = newBook.id;
+      } else {
+        targetBookId = parseInt(selectedBookId);
+      }
+
+      await updateNote({ id: moveNoteId, notebook_book_id: targetBookId });
+
+      // Remove from main notes list
+      setNotes(prev => prev.filter(n => n.id !== moveNoteId));
+
+      // If active, update it or close it? 
+      // If it's active, we might want to keep it open but it's now part of a book.
+      // Ideally, we should switch view to the book.
+      const book = books.find(b => b.id === targetBookId) || (selectedBookId === 'new' ? (await getNotebookBooks()).find(b => b.id === targetBookId) : null);
+
+      if (book) {
+        // Close the note tab if open
+        closeTab(`note-${moveNoteId}`);
+        // Open the book
+        addTabAndActivate(book);
+      }
+
+      toast({ title: 'Note moved to book' });
+      setIsMoveDialogOpen(false);
+      setMoveNoteId(null);
+      setIsSubmitting(false);
+    };
+
+    return (
+      <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add to Book</DialogTitle>
+            <DialogDescription>Select a book to add this note to, or create a new one.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Select Book</Label>
+              <Select value={selectedBookId} onValueChange={setSelectedBookId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a book" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">+ Create New Book</SelectItem>
+                  {books.map(b => (
+                    <SelectItem key={b.id} value={String(b.id)}>{b.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedBookId === 'new' && (
+              <div className="grid gap-2">
+                <Label>New Book Title</Label>
+                <Input value={newBookTitle} onChange={e => setNewBookTitle(e.target.value)} placeholder="My New Book" />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsMoveDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleMove} disabled={isSubmitting || (selectedBookId === 'new' && !newBookTitle.trim())}>Move</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
   };
 
   const persist = async () => {
     if (!active) return;
     startSaving(async () => {
-      const updatedNoteData: Partial<Note> = { id: active.id, title, content, tags, editor_type: editorType };
-      await updateNote(updatedNoteData);
-      const updated: Note = { ...active, ...updatedNoteData };
+      if ('content' in active) {
+        const eType = editorType === 'book' ? 'default' : editorType;
+        const updatedNoteData: Partial<Note> = { id: active.id, title, content, tags, editor_type: eType };
+        await updateNote(updatedNoteData);
+        const updated: Note = { ...active, ...updatedNoteData } as Note;
 
-      setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
-      setOpenTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)));
-      setActive(updated); // Also update the main active state
+        setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
+        setOpenTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+        setActive(updated);
+      } else {
+        const updatedBookData: Partial<NotebookBook> = { id: active.id, title };
+        await updateNotebookBook(updatedBookData);
+        const updated: NotebookBook = { ...active, ...updatedBookData } as NotebookBook;
 
+        setBooks(prev => prev.map(b => (b.id === updated.id ? updated : b)));
+        setOpenTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+        setActive(updated);
+      }
       toast({ title: 'Saved' });
     });
   };
 
   const handleEditorTypeChange = async (newType: 'default' | 'math') => {
-    if (!active) return;
+    if (!active || !('content' in active)) return;
     setEditorType(newType);
     startSaving(async () => {
       await updateNote({ id: active.id, editor_type: newType });
@@ -226,10 +420,15 @@ export default function NotebookPage() {
 
   const remove = async () => {
     if (!active) return;
-    await deleteNote(active.id);
-    setNotes(prev => prev.filter(n => n.id !== active.id));
-    closeTab(active.id, true);
-    toast({ title: 'Note deleted' });
+    if ('content' in active) {
+      await deleteNote(active.id);
+      setNotes(prev => prev.filter(n => n.id !== active.id));
+    } else {
+      await deleteNotebookBook(active.id);
+      setBooks(prev => prev.filter(b => b.id !== active.id));
+    }
+    closeTab(getTabId(active), true);
+    toast({ title: 'Item deleted' });
   };
 
   const addTagFromInput = () => {
@@ -241,15 +440,16 @@ export default function NotebookPage() {
 
   const removeTag = (t: string) => setTags(prev => prev.filter(x => x !== t));
 
-  const closeTab = (id: number, isDeletion = false) => {
+  const closeTab = (tabId: string, isDeletion = false) => {
     setOpenTabs(prev => {
-      const idx = prev.findIndex(p => p.id === id);
+      const idx = prev.findIndex(p => getTabId(p) === tabId);
       if (idx === -1) return prev;
-      const newTabs = prev.filter(p => p.id !== id);
-      if (activeTabId === id) {
-        let next: number | null = null;
+      const newTabs = prev.filter(p => getTabId(p) !== tabId);
+      if (activeTabId === tabId) {
+        let next: string | null = null;
         if (newTabs.length > 0) {
-          next = (newTabs[idx] || newTabs[idx - 1] || newTabs[newTabs.length - 1]).id;
+          const nextItem = newTabs[idx] || newTabs[idx - 1] || newTabs[newTabs.length - 1];
+          next = getTabId(nextItem);
         }
         setActiveTabId(next);
         if (!isDeletion && !isDesktop && next == null) setMobileView('list');
@@ -278,11 +478,11 @@ export default function NotebookPage() {
     return { folderTree: tree, allFolderPaths: Array.from(paths).sort() };
   }, [notes]);
 
-  const visibleNotes: Note[] = React.useMemo(() => {
+  const visibleNotes: (Note | NotebookBook)[] = React.useMemo(() => {
     const base = filtered;
     if (selectedFolder === 'all') return base;
-    if (selectedFolder === 'unfiled') return base.filter(n => !n.folder_path);
-    return base.filter(n => n.folder_path === selectedFolder);
+    if (selectedFolder === 'unfiled') return base.filter(n => !('folder_path' in n) || !n.folder_path);
+    return base.filter(n => 'folder_path' in n && n.folder_path === selectedFolder);
   }, [filtered, selectedFolder]);
 
   const handleMoveNote = async (noteId: number, folderPath: string | null) => {
@@ -349,14 +549,13 @@ export default function NotebookPage() {
       {Object.values(nodes).sort((a, b) => a.name.localeCompare(b.name)).map(node => (
         <AccordionItem value={node.path} key={node.path}>
           <AccordionTrigger>
-            <button
-              type="button"
-              className={cn('flex items-center gap-2 text-left', selectedFolder === node.path && 'text-primary')}
+            <span
+              className={cn('flex items-center gap-2 text-left flex-1', selectedFolder === node.path && 'text-primary')}
               onClick={(e) => { e.stopPropagation(); setSelectedFolder(node.path); }}
             >
               <FolderIcon className="h-4 w-4" />
               <span className="truncate">{node.name}</span>
-            </button>
+            </span>
           </AccordionTrigger>
           <AccordionContent>
             <FolderRenderer nodes={node.children} />
@@ -378,7 +577,10 @@ export default function NotebookPage() {
           )}
         >
           <div className="flex items-center gap-2 p-3 border-b">
-            <Button className="gap-2" onClick={() => createNew()}><Plus className="h-4 w-4" /> New</Button>
+            <Button className="gap-2" onClick={() => { setCreationType('note'); setIsCreationDialogOpen(true); }}><Plus className="h-4 w-4" /> New</Button>
+            <Button variant="outline" size="icon" onClick={() => { setCreationType('book'); setIsCreationDialogOpen(true); }} title="New Book"><Book className="h-4 w-4" /></Button>
+            <NewCreationDialog />
+            <MoveToBookDialog />
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" size="icon" aria-label="New Folder">
@@ -420,47 +622,53 @@ export default function NotebookPage() {
                 <div className="text-sm text-muted-foreground p-4 text-center">No notes found</div>
               )}
               {!isLoading && visibleNotes.map(n => (
-                <button
-                  key={n.id}
-                  onClick={() => openNote(n.id)}
+                <div
+                  key={`${'content' in n ? 'note' : 'book'}-${n.id}`}
+                  onClick={() => openItem(n)}
                   className={cn(
-                    'w-full rounded-md border p-3 text-left transition-colors hover:bg-amber-50',
+                    'w-full rounded-md border p-3 text-left transition-colors hover:bg-amber-50 cursor-pointer',
                     active?.id === n.id ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'
                   )}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="sticky-label inline-block rounded px-2 py-1 text-sm font-medium max-w-[75%] truncate">{n.title || 'Untitled Note'}</div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="sticky-label inline-block rounded px-2 py-1 text-sm font-medium flex-1 min-w-0 truncate">{n.title || 'Untitled Note'}</div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0 opacity-100 text-muted-foreground hover:text-foreground z-10" onClick={(e) => e.stopPropagation()}>
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
-                          <DropdownMenuPortal>
-                            <DropdownMenuSubContent>
-                              <DropdownMenuItem onClick={() => handleMoveNote(n.id, null)}>
-                                Unfiled Notes
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              {allFolderPaths.map(path => (
-                                <DropdownMenuItem key={path} onClick={() => handleMoveNote(n.id, path)}>
-                                  {path.replace(/:/g, ' / ')}
+                        {'folder_path' in n && (
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
+                            <DropdownMenuPortal>
+                              <DropdownMenuSubContent>
+                                <DropdownMenuItem onClick={() => handleMoveNote(n.id, null)}>
+                                  Unfiled Notes
                                 </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuSubContent>
-                          </DropdownMenuPortal>
-                        </DropdownMenuSub>
+                                <DropdownMenuSeparator />
+                                {allFolderPaths.map(path => (
+                                  <DropdownMenuItem key={path} onClick={() => handleMoveNote(n.id, path)}>
+                                    {path.replace(/:/g, ' / ')}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuPortal>
+                          </DropdownMenuSub>
+                        )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setActiveTabId(n.id); remove(); }}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setMoveNoteId(n.id); setIsMoveDialogOpen(true); }}>
+                          <Book className="mr-2 h-4 w-4" /> Add to Book
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setActiveTabId(getTabId(n)); remove(); }}>
                           <Trash2 className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  {n.tags?.length ? (
+                  {('tags' in n) && n.tags?.length ? (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {n.tags.slice(0, 4).map(t => (
                         <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
@@ -468,7 +676,7 @@ export default function NotebookPage() {
                       {n.tags.length > 4 && (<Badge variant="outline" className="text-xs">+{n.tags.length - 4}</Badge>)}
                     </div>
                   ) : null}
-                </button>
+                </div>
               ))}
             </div>
           </ScrollArea>
@@ -487,21 +695,21 @@ export default function NotebookPage() {
                 <div className="flex items-center gap-1 p-1">
                   {openTabs.map(tab => (
                     <div
-                      key={tab.id}
+                      key={getTabId(tab)}
                       className={cn(
                         'flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-md border text-sm flex-shrink-0',
-                        activeTabId === tab.id ? 'bg-primary/10 border-primary' : 'bg-transparent border-transparent hover:bg-muted'
+                        activeTabId === getTabId(tab) ? 'bg-primary/10 border-primary' : 'bg-transparent border-transparent hover:bg-muted'
                       )}
                     >
                       <button
                         className="font-medium max-w-[28ch] truncate"
-                        onClick={() => setActiveTabId(tab.id)}
+                        onClick={() => setActiveTabId(getTabId(tab))}
                       >
                         {tab.title || 'Untitled Note'}
                       </button>
                       <button
                         className="text-muted-foreground hover:text-foreground rounded-full p-0.5 hover:bg-black/10"
-                        onClick={() => closeTab(tab.id)}
+                        onClick={() => closeTab(getTabId(tab))}
                         aria-label={`Close ${tab.title}`}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -565,10 +773,36 @@ export default function NotebookPage() {
               </div>
             </div>
 
-            <div className="paper-content">
+            <div className="paper-content h-full flex flex-col">
               {!active ? (
                 <div className="p-10 text-center text-muted-foreground">
                   Select a note or create a new one to begin.
+                </div>
+              ) : !('content' in active) ? (
+                <div className="h-full p-4">
+                  <div className="mb-4 flex items-center justify-between">
+                    {isEdit ? (
+                      <div className="flex items-center gap-2 w-full">
+                        <Input
+                          value={title}
+                          onChange={e => setTitle(e.target.value)}
+                          className="text-2xl font-bold border-none px-0 focus-visible:ring-0 flex-1"
+                        />
+                        <Button size="sm" onClick={() => { setIsEdit(false); persist(); }}>Done</Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 w-full group">
+                        <h1 className="text-2xl font-bold">{title}</h1>
+                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setIsEdit(true)}>
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <BookView book={active as NotebookBook} onUpdateBook={(updated) => {
+                    setActive(updated);
+                    setBooks(prev => prev.map(b => b.id === updated.id ? updated : b));
+                  }} />
                 </div>
               ) : (
                 <div className="p-3 sm:p-4 lg:p-8">
@@ -628,11 +862,11 @@ export default function NotebookPage() {
           </div>
 
           <div className="md:hidden fixed bottom-6 right-6">
-            <Button onClick={() => createNew()} className="h-12 w-12 rounded-full shadow-lg" size="icon"><Plus className="h-6 w-6" /></Button>
+            <Button onClick={() => { setCreationType('note'); setIsCreationDialogOpen(true); }} className="h-12 w-12 rounded-full shadow-lg" size="icon"><Plus className="h-6 w-6" /></Button>
           </div>
         </section>
       </div>
-    </div>
+    </div >
   );
 }
 
