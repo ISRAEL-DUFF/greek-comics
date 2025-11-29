@@ -21,9 +21,10 @@ import { useToast } from '@/hooks/use-toast';
 interface BookViewProps {
     book: NotebookBook;
     onUpdateBook: (book: NotebookBook) => void;
+    editorType: 'math' | 'default' | 'book';
 }
 
-export function BookView({ book, onUpdateBook }: BookViewProps) {
+export function BookView({ book, onUpdateBook, editorType }: BookViewProps) {
     const { toast } = useToast();
     const [pages, setPages] = useState<Note[]>([]);
     const [activePage, setActivePage] = useState<Note | null>(null);
@@ -74,7 +75,7 @@ export function BookView({ book, onUpdateBook }: BookViewProps) {
             await updateNote({ id: activePage.id, title: pageTitle, content: pageContent });
             const updated = { ...activePage, title: pageTitle, content: pageContent };
             setPages(prev => prev.map(p => p.id === updated.id ? updated : p));
-            setActivePage(updated);
+            setActivePage(prev => (prev?.id === updated.id ? updated : prev));
             setIsEditingPage(false);
             toast({ title: 'Page saved' });
         });
@@ -83,9 +84,7 @@ export function BookView({ book, onUpdateBook }: BookViewProps) {
     const handleDeletePage = async (pageId: number) => {
         await deleteNote(pageId);
         setPages(prev => prev.filter(p => p.id !== pageId));
-        if (activePage?.id === pageId) {
-            setActivePage(null);
-        }
+        setActivePage(prev => (prev?.id === pageId ? null : prev));
         toast({ title: 'Page deleted' });
     };
 
@@ -184,7 +183,14 @@ export function BookView({ book, onUpdateBook }: BookViewProps) {
                             ) : (
                                 <div className="prose prose-sm max-w-none">
                                     <h1 className="mb-4">{activePage.title}</h1>
-                                    <MarkdownDisplay markdown={activePage.content || ''} className="w-full" />
+                                    {/* <MarkdownDisplay markdown={activePage.content || ''} className="w-full" /> */}
+                                    {
+                                        editorType === 'math' ? (
+                                            <MarkdownMathjaxDisplay markdown={activePage.content || ''} className="w-full overflow-x-auto" markdownClassName="prose max-w-none" />
+                                        ) : (
+                                            <MarkdownDisplay markdown={activePage.content || ''} className="w-full overflow-x-auto" markdownClassName="prose max-w-none" />
+                                        )
+                                    }
                                 </div>
                             )}
                         </div>

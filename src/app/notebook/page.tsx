@@ -69,7 +69,7 @@ export default function NotebookPage() {
   const [editorType, setEditorType] = useState<'default' | 'math' | 'book'>('default');
   const [selectedFolder, setSelectedFolder] = useState<'all' | 'unfiled' | string>('all');
 
-  const prevId = useRef<number | undefined>(undefined);
+  const prevTabId = useRef<string | undefined>(undefined);
   const OPEN_TABS_LS_KEY = 'notebook.openTabs.v1';
   const OPEN_TAB_IDS_LS_KEY = 'notebook.openTabIds.v1';
   const ACTIVE_TAB_ID_LS_KEY = 'notebook.activeTabId.v1';
@@ -185,7 +185,8 @@ export default function NotebookPage() {
 
   useEffect(() => {
     if (!active) return;
-    if (prevId.current !== active.id) {
+    const currentTabId = getTabId(active);
+    if (prevTabId.current !== currentTabId) {
       setTitle(active.title || '');
       if ('content' in active) {
         setContent(active.content || '');
@@ -198,7 +199,7 @@ export default function NotebookPage() {
         setEditorType('book');
       }
       setIsEdit(false);
-      prevId.current = active.id;
+      prevTabId.current = currentTabId;
     }
   }, [active]);
 
@@ -391,7 +392,7 @@ export default function NotebookPage() {
 
         setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
         setOpenTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)));
-        setActive(updated);
+        setActive(prev => (prev?.id === updated.id ? updated : prev));
       } else {
         const updatedBookData: Partial<NotebookBook> = { id: active.id, title };
         await updateNotebookBook(updatedBookData);
@@ -399,21 +400,24 @@ export default function NotebookPage() {
 
         setBooks(prev => prev.map(b => (b.id === updated.id ? updated : b)));
         setOpenTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)));
-        setActive(updated);
+        setActive(prev => (prev?.id === updated.id ? updated : prev));
       }
       toast({ title: 'Saved' });
     });
   };
 
   const handleEditorTypeChange = async (newType: 'default' | 'math') => {
-    if (!active || !('content' in active)) return;
+    console.log('handleEditorTypeChange', newType, active);
+    // if (!active || !('content' in active)) return;
+    if (!active) return;
+    if (!('content' in active) && !('title' in active)) return;
     setEditorType(newType);
     startSaving(async () => {
       await updateNote({ id: active.id, editor_type: newType });
       const updated: Note = { ...active, editor_type: newType };
-      setActive(updated);
       setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
       setOpenTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      setActive(prev => (prev?.id === updated.id ? updated : prev));
       toast({ title: 'Editor type updated' });
     });
   };
@@ -630,7 +634,7 @@ export default function NotebookPage() {
                     active?.id === n.id ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'
                   )}
                 >
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3 max-w-[calc(100%-4rem)]">
                     <div className="sticky-label inline-block rounded px-2 py-1 text-sm font-medium flex-1 min-w-0 truncate">{n.title || 'Untitled Note'}</div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -802,7 +806,7 @@ export default function NotebookPage() {
                   <BookView book={active as NotebookBook} onUpdateBook={(updated) => {
                     setActive(updated);
                     setBooks(prev => prev.map(b => b.id === updated.id ? updated : b));
-                  }} />
+                  }} editorType={editorType} />
                 </div>
               ) : (
                 <div className="p-3 sm:p-4 lg:p-8">
