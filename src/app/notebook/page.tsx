@@ -413,6 +413,7 @@ export default function NotebookPage() {
     if (!('content' in active) && !('title' in active)) return;
     setEditorType(newType);
     startSaving(async () => {
+      if (!active || !('content' in active)) return; // Add runtime check
       await updateNote({ id: active.id, editor_type: newType });
       const updated: Note = { ...active, editor_type: newType };
       setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
@@ -661,10 +662,14 @@ export default function NotebookPage() {
                             </DropdownMenuPortal>
                           </DropdownMenuSub>
                         )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setMoveNoteId(n.id); setIsMoveDialogOpen(true); }}>
-                          <Book className="mr-2 h-4 w-4" /> Add to Book
-                        </DropdownMenuItem>
+                        {'content' in n && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setMoveNoteId(n.id); setIsMoveDialogOpen(true); }}>
+                              <Book className="mr-2 h-4 w-4" /> Add to Book
+                            </DropdownMenuItem>
+                          </>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setActiveTabId(getTabId(n)); remove(); }}>
                           <Trash2 className="mr-2 h-4 w-4" /> Delete
