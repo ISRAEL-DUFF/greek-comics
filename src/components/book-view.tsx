@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MarkdownEditor } from '@/components/markdown-editor';
 import { MarkdownDisplay } from '@/components/markdown-display';
 import { MarkdownMathjaxDisplay } from '@/components/markdown-mathjax-display';
-import { Plus, ChevronLeft, ChevronRight, Edit3, Trash2, Save, Loader2, FileText, MoreVertical, Book, PanelLeftClose, PanelLeftOpen, ArrowUp, ArrowDown, Maximize2, Minimize2 } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Edit3, Trash2, Save, Loader2, FileText, MoreVertical, Book, PanelLeftClose, PanelLeftOpen, ArrowUp, ArrowDown, Maximize2, Minimize2, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
     DropdownMenu,
@@ -17,6 +17,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import '../app/notebook/notebook.css';
 
 interface BookViewProps {
     book: NotebookBook;
@@ -150,7 +151,7 @@ export function BookView({ book, onUpdateBook, editorType }: BookViewProps) {
     if (isReaderMode && activePage) {
         // "fixed inset-0 bg-background z-50 flex flex-col"
         return (
-            <div className="fixed inset-0 z-50 flex flex-col">
+            <div className="fixed inset-0 paper-reader-mode z-50 flex flex-col">
                 {/* Reader Mode Header */}
                 <div className="flex items-center justify-between px-6 py-3 border-b">
                     <div className="flex items-center gap-4">
@@ -200,75 +201,70 @@ export function BookView({ book, onUpdateBook, editorType }: BookViewProps) {
 
     return (
         <div className="flex h-full flex-col md:flex-row gap-4">
-            {/* Table of Contents Sidebar */}
-            <div className={cn(
-                "flex-shrink-0 border-r pr-4 flex flex-col h-[calc(100vh-200px)] transition-all duration-300",
-                isTocCollapsed ? "w-12" : "w-full md:w-64"
-            )}>
-                <div className="flex items-center justify-between mb-4">
-                    {!isTocCollapsed && <h3 className="font-semibold text-lg">Table of Contents</h3>}
+            {/* Mobile Table of Contents (Accordion) */}
+            <div className="md:hidden w-full border-b pb-4 mb-4">
+                <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-lg">Table of Contents</h3>
                     <div className="flex items-center gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => setIsTocCollapsed(!isTocCollapsed)} title={isTocCollapsed ? "Expand TOC" : "Collapse TOC"}>
-                            {isTocCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-                        </Button>
                         {!isTocCollapsed && (
                             <Button size="sm" variant="outline" onClick={handleAddPage}>
                                 <Plus className="h-4 w-4" />
                             </Button>
                         )}
+                        <Button size="sm" variant="ghost" onClick={() => setIsTocCollapsed(!isTocCollapsed)}>
+                            {isTocCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                        </Button>
                     </div>
                 </div>
                 {!isTocCollapsed && (
-                    <ScrollArea className="flex-1">
-                        <div className="space-y-1">
-                            {pages.map((page, index) => (
-                                <div
-                                    key={page.id}
-                                    className={cn(
-                                        "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2 group",
-                                        activePage?.id === page.id
-                                            ? "bg-primary/10 text-primary font-medium"
-                                            : "hover:bg-muted text-muted-foreground"
-                                    )}
+                    <div className="mt-4 space-y-1">
+                        {pages.map((page, index) => (
+                            <div
+                                key={page.id}
+                                className={cn(
+                                    "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2 group",
+                                    activePage?.id === page.id
+                                        ? "bg-primary/10 text-primary font-medium"
+                                        : "hover:bg-muted text-muted-foreground"
+                                )}
+                            >
+                                <button
+                                    onClick={() => setActivePage(page)}
+                                    className="flex items-center gap-2 flex-1 min-w-0"
                                 >
-                                    <button
-                                        onClick={() => setActivePage(page)}
-                                        className="flex items-center gap-2 flex-1 min-w-0"
+                                    <span className="text-xs opacity-50 w-4">{index + 1}.</span>
+                                    <span className="truncate flex-1">{page.title || 'Untitled Page'}</span>
+                                </button>
+                                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        onClick={(e) => { e.stopPropagation(); handleReorderPage(page.id, 'up'); }}
+                                        disabled={index === 0}
+                                        title="Move up"
                                     >
-                                        <span className="text-xs opacity-50 w-4">{index + 1}.</span>
-                                        <span className="truncate flex-1">{page.title || 'Untitled Page'}</span>
-                                    </button>
-                                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-6 w-6"
-                                            onClick={(e) => { e.stopPropagation(); handleReorderPage(page.id, 'up'); }}
-                                            disabled={index === 0}
-                                            title="Move up"
-                                        >
-                                            <ArrowUp className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-6 w-6"
-                                            onClick={(e) => { e.stopPropagation(); handleReorderPage(page.id, 'down'); }}
-                                            disabled={index === pages.length - 1}
-                                            title="Move down"
-                                        >
-                                            <ArrowDown className="h-3 w-3" />
-                                        </Button>
-                                    </div>
+                                        <ArrowUp className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        onClick={(e) => { e.stopPropagation(); handleReorderPage(page.id, 'down'); }}
+                                        disabled={index === pages.length - 1}
+                                        title="Move down"
+                                    >
+                                        <ArrowDown className="h-3 w-3" />
+                                    </Button>
                                 </div>
-                            ))}
-                            {pages.length === 0 && !isLoading && (
-                                <div className="text-sm text-muted-foreground text-center py-4">
-                                    No pages yet.
-                                </div>
-                            )}
-                        </div>
-                    </ScrollArea>
+                            </div>
+                        ))}
+                        {pages.length === 0 && !isLoading && (
+                            <div className="text-sm text-muted-foreground text-center py-4">
+                                No pages yet.
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
 
@@ -373,6 +369,78 @@ export function BookView({ book, onUpdateBook, editorType }: BookViewProps) {
                     <div className="flex-1 flex items-center justify-center text-muted-foreground">
                         {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Select a page or create one to begin."}
                     </div>
+                )}
+            </div>
+
+            {/* Table of Contents Sidebar (Desktop) */}
+            <div className={cn(
+                "hidden md:flex flex-shrink-0 border-r pr-4 flex-col h-[calc(100vh-200px)] transition-all duration-300",
+                isTocCollapsed ? "w-12" : "w-64"
+            )}>
+                <div className="flex items-center justify-between mb-4">
+                    {!isTocCollapsed && <h3 className="font-semibold text-lg">Table of Contents</h3>}
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => setIsTocCollapsed(!isTocCollapsed)} title={isTocCollapsed ? "Expand TOC" : "Collapse TOC"}>
+                            {isTocCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                        </Button>
+                        {!isTocCollapsed && (
+                            <Button size="sm" variant="outline" onClick={handleAddPage}>
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
+                </div>
+                {!isTocCollapsed && (
+                    <ScrollArea className="flex-1">
+                        <div className="space-y-1">
+                            {pages.map((page, index) => (
+                                <div
+                                    key={page.id}
+                                    className={cn(
+                                        "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2 group",
+                                        activePage?.id === page.id
+                                            ? "bg-primary/10 text-primary font-medium"
+                                            : "hover:bg-muted text-muted-foreground"
+                                    )}
+                                >
+                                    <button
+                                        onClick={() => setActivePage(page)}
+                                        className="flex items-center gap-2 flex-1 min-w-0"
+                                    >
+                                        <span className="text-xs opacity-50 w-4">{index + 1}.</span>
+                                        <span className="truncate flex-1">{page.title || 'Untitled Page'}</span>
+                                    </button>
+                                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-6 w-6"
+                                            onClick={(e) => { e.stopPropagation(); handleReorderPage(page.id, 'up'); }}
+                                            disabled={index === 0}
+                                            title="Move up"
+                                        >
+                                            <ArrowUp className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-6 w-6"
+                                            onClick={(e) => { e.stopPropagation(); handleReorderPage(page.id, 'down'); }}
+                                            disabled={index === pages.length - 1}
+                                            title="Move down"
+                                        >
+                                            <ArrowDown className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                            {pages.length === 0 && !isLoading && (
+                                <div className="text-sm text-muted-foreground text-center py-4">
+                                    No pages yet.
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
                 )}
             </div>
         </div>
